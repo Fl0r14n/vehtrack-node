@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         min: -90,
         max: 90
       },
+      field: 'start_latitude',
       description: 'gg.ggggg'
     },
     startLongitude: {
@@ -15,10 +16,12 @@ module.exports = (sequelize, DataTypes) => {
         min: -180,
         max: 180
       },
+      field: 'start_longitude',
       description: 'gg.ggggg'
     },
     startTimestamp: {
       type: DataTypes.DATE,
+      field: 'start_timestamp',
       description: 'ms'
     },
     stopLatitude: {
@@ -27,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
         min: -90,
         max: 90
       },
+      field: 'stop_latitude',
       description: 'gg.ggggg'
     },
     stopLongitude: {
@@ -35,10 +39,12 @@ module.exports = (sequelize, DataTypes) => {
         min: -180,
         max: 180
       },
+      field: 'stop_longitude',
       description: 'gg.ggggg'
     },
     stopTimestamp: {
       type: DataTypes.DATE,
+      field: 'stop_timestamp',
       description: 'ms'
     },
     distance: {
@@ -47,10 +53,12 @@ module.exports = (sequelize, DataTypes) => {
     },
     averageSpeed: {
       type: DataTypes.FLOAT,
+      field: 'average_speed',
       description: 'km/h'
     },
     maximumSpeed: {
       type: DataTypes.FLOAT,
+      field: 'maximum_speed',
       description: 'km/h'
     },
     duration: {
@@ -58,6 +66,7 @@ module.exports = (sequelize, DataTypes) => {
       description: 'ms'
     }
   });
+  Journey.tableName = 'journeys';
   Journey.associate = (models) => {
     Journey.belongsTo(models.Device, {
       onDelete: 'CASCADE',

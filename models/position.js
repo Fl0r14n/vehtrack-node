@@ -23,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0.0
     }
   });
+  Position.tableName = 'positions';
   Position.associate = (models) => {
     Position.belongsTo(models.Journey, {
       onDelete: 'CASCADE',

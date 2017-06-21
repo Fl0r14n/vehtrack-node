@@ -10,15 +10,8 @@ module.exports = function (sequelize, DataTypes) {
       defaultValue: ''
     }
   });
+  AccountRole.tableName = 'roles';
   AccountRole.associate = (models) => {
-    AccountRole.belongsTo(models.Account, {
-      as: 'Role',
-      onDelete: 'CASCADE',
-      foreignKey: {
-        name: 'account_id',
-        allowNull: false
-      }
-    })
   };
   return AccountRole;
 };

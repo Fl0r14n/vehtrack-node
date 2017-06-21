@@ -9,17 +9,23 @@ module.exports = (sequelize, DataTypes) => {
     },
     parentId: {
       type: DataTypes.INTEGER,
-      hierarchy: true
+      hierarchy: true,
+      field: 'parent_id'
     }
   });
+  Fleet.tableName = 'fleets';
   Fleet.associate = (models) => {
     Fleet.belongsToMany(models.User, {
-      through: 'FleetUser',
-      as: 'Users'
+      as: 'Users',
+      through: 'devices_fleets',
+      foreignKey: 'fleet_id',
+      otherKey: 'user_id'
     });
     Fleet.belongsToMany(models.Device, {
-      through: 'FleetDevice',
-      as: 'Devices'
+      as: 'Devices',
+      through: 'users_fleets',
+      foreignKey: 'fleet_id',
+      otherKey: 'device_id'
     })
   };
   Fleet.getUserFleets = (user) => {

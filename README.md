@@ -40,4 +40,10 @@ npm install --save sequelize sequelize-cli sqlite3
 # generate models
 node_modules/.bin/sequelize init
 node_modules/.bin/sequelize model:create --name User --attributes username:string
+
+# create migrations
+node_modules/.bin/sequelize migration:create
+
+# generate schema from models. Move resulted files to migrations folder
+node generate-schema.js
 ```

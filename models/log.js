@@ -27,6 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
   };
+  Log.tableName = 'logs';
   Log.LEVEL = {
     ERROR: 'ERROR',
     WARN: 'WARN',

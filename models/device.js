@@ -1,7 +1,10 @@
 'use strict';
 module.exports = (sequelize, DataTypes) => {
   const Device = sequelize.define('Device', {
-    serial: DataTypes.STRING(30),
+    serial: {
+      type: DataTypes.STRING(30),
+      unique: true
+    },
     type: DataTypes.STRING(30),
     description: {
       type: DataTypes.STRING,
@@ -67,6 +70,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     }
   });
+  Device.tableName = 'devices';
   Device.associate = (models) => {
     Device.belongsTo(models.Account, {
       onDelete: 'CASCADE',
@@ -77,8 +81,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
     Device.belongsToMany(models.Fleet, {
-      through: 'FleetDevice',
-      as: 'Fleets'
+      as: 'Fleets',
+      through: 'devices_fleets',
+      foreignKey: 'device_id',
+      otherKey: 'fleet_id'
     })
   };
   Device.luhnChecksum = (value) => {

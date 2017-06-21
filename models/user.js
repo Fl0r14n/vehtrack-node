@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     }
   });
+  User.tableName = 'users';
   User.associate = (models) => {
     User.belongsTo(models.Account, {
       onDelete: 'CASCADE',
@@ -18,8 +19,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
     User.belongsToMany(models.Fleet, {
-      through: 'FleetUser',
-      as: 'Fleets'
+      as: 'Fleets',
+      through: 'users_fleets',
+      foreignKey: 'user_id',
+      otherKey: 'fleet_id'
     })
   };
   User.getFleetUsers = (fleetName) => {

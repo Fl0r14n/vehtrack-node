@@ -12,7 +12,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     isActive: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true
+      defaultValue: true,
+      field: 'is_active'
     },
     created: {
       type: DataTypes.DATE,
@@ -24,10 +25,20 @@ module.exports = (sequelize, DataTypes) => {
     },
     lastLogin: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW
+      defaultValue: DataTypes.NOW,
+      field: 'last_login'
     }
   });
+  Account.tableName = 'accounts';
   Account.associate = (models) => {
+    Account.belongsTo(models.AccountRole, {
+      as: 'Role',
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'role_id',
+        allowNull: false
+      }
+    })
   };
   Account._hashPassword = (password) => {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
