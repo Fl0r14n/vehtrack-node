@@ -1,14 +1,14 @@
 'use strict';
 module.exports = function (sequelize, DataTypes) {
   var Device = sequelize.define('Device', {
-    serial: sequelize.STRING(30),
-    type: sequelize.STRING(30),
+    serial: DataTypes.STRING(30),
+    type: DataTypes.STRING(30),
     description: {
       type: DataTypes.STRING,
       defaultValue: ''
     },
     phone: {
-      type: sequelize.STRING(12),
+      type: DataTypes.STRING(12),
       defaultValue: '',
       validate: {
         is: {
@@ -18,11 +18,11 @@ module.exports = function (sequelize, DataTypes) {
       }
     },
     plate: {
-      type: sequelize.STRING(30),
+      type: DataTypes.STRING(30),
       defaultValue: ''
     },
     vin: {
-      type: sequelize.STRING(17),
+      type: DataTypes.STRING(17),
       defaultValue: '',
       validate: {
         is: {
@@ -32,7 +32,7 @@ module.exports = function (sequelize, DataTypes) {
       }
     },
     imei: {
-      type: sequelize.STRING(15),
+      type: DataTypes.STRING(15),
       defaultValue: '',
       validate: {
         is: {
@@ -47,7 +47,7 @@ module.exports = function (sequelize, DataTypes) {
       }
     },
     imsi: {
-      type: sequelize.STRING(15),
+      type: DataTypes.STRING(15),
       defaultValue: '',
       validate: {
         is: {
@@ -57,7 +57,7 @@ module.exports = function (sequelize, DataTypes) {
       }
     },
     msisdn: {
-      type: sequelize.STRING(14),
+      type: DataTypes.STRING(14),
       defaultValue: '',
       validate: {
         is: {

@@ -6,7 +6,8 @@ var express = require('express');
 var router = express.Router();
 var models = require('../models');
 
-var secret = 'super secret';
+var env = process.env.NODE_ENV || 'development';
+var config = require('../config.json')[env]['jwt'];
 
 passport.use(new passportLocal.LocalStrategy(function (email, password, next) {
   models.Account.findOne({email: email}).then(function (account) {
@@ -19,12 +20,15 @@ router.post('/login', function (req, res, next) {
   passport.authenticate('local', function (err, account, info) {
     if (err) return next(err);
     if (!account) {
-      return res.status(401).json({status: 'error', code: 'unauthorized'});
+      return res.status(401).json({
+        status: 'error',
+        code: 'unauthorized'
+      });
     } else {
       return res.json({
-        token: jwt.sign({
-          id: account.email
-        }, secret)
+        token: jwt.sign(account, config.secret, {
+          expiresIn: config.expiresIn
+        })
       });
     }
   })(req, res, next);
@@ -45,7 +49,7 @@ router.post('/register', function (req, res, next) {
       res.status(409).json({status: 'conflict', code: 'user already created'});
     }
   });
-};
+});
 
 exports.auth = passport.initialize();
 exports.login = router;

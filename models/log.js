@@ -3,7 +3,7 @@ module.exports = function(sequelize, DataTypes) {
   var Log = sequelize.define('Log', {
     timestamp: DataTypes.DATE,
     level: {
-      type: sequelize.ENUM('ERROR', 'WARN', 'INFO', 'DEBUG'),
+      type: DataTypes.ENUM('ERROR', 'WARN', 'INFO', 'DEBUG'),
       defaultValue: 'DEBUG'
     },
     message: {

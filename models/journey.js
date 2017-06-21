@@ -50,11 +50,11 @@ module.exports = function (sequelize, DataTypes) {
       description: 'km/h'
     },
     maximumSpeed: {
-      types: DataTypes.FLOAT,
+      type: DataTypes.FLOAT,
       description: 'km/h'
     },
     duration: {
-      types: DataTypes.FLOAT,
+      type: DataTypes.FLOAT,
       description: 'ms'
     }
   }, {

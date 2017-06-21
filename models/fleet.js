@@ -2,7 +2,7 @@
 module.exports = function (sequelize, DataTypes) {
   var Fleet = sequelize.define('Fleet', {
     name: {
-      type: sequelize.STRING(64),
+      type: DataTypes.STRING(64),
       validate: {
         is: /^[\w.@+-]+$/
       }

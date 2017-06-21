@@ -1,17 +1,35 @@
 {
   "development": {
-    "dialect": "sqlite",
-    "storage": "./db.development.sqlite"
+    "database": {
+      "dialect": "sqlite",
+      "storage": "./db.development.sqlite",
+      "define": {
+        "freezeTableName": true
+      },
+      "sync": {
+        "force": true
+      },
+      "syncOnAssociation": true
+    },
+    "jwt": {
+      "secret": "hackme",
+      "expiresIn": 10080
+    }
   },
   "test": {
-    "dialect": "sqlite",
-    "storage": ":memory:"
+    "database": {
+      "dialect": "sqlite",
+      "storage": ":memory:"
+    }
   },
   "production": {
-    "username": "root",
-    "password": null,
-    "database": "database_production",
-    "host": "127.0.0.1",
-    "dialect": "mysql"
+    "database": {
+      "database": "tc",
+      "username": "tc",
+      "password": "tc",
+      "host": "localhost",
+      "port": 5432,
+      "dialect": "postgres"
+    }
   }
 }

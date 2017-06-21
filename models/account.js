@@ -4,7 +4,7 @@ var bcrypt = require('bcryptjs');
 module.exports = function (sequelize, DataTypes) {
   var Account = sequelize.define('Account', {
     email: {
-      type: sequelize.STRING(128),
+      type: DataTypes.STRING(128),
       primaryKey: true,
       validate: {
         isEmail: true
@@ -19,7 +19,7 @@ module.exports = function (sequelize, DataTypes) {
       defaultValue: DataTypes.NOW
     },
     password: {
-      type: sequelize.STRING(128),
+      type: DataTypes.STRING(128),
       allowNull: false
     },
     lastLogin: {
