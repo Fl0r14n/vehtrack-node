@@ -1,6 +1,6 @@
 'use strict';
-module.exports = function (sequelize, DataTypes) {
-  var Device = sequelize.define('Device', {
+module.exports = (sequelize, DataTypes) => {
+  const Device = sequelize.define('Device', {
     serial: DataTypes.STRING(30),
     type: DataTypes.STRING(30),
     description: {
@@ -66,57 +66,54 @@ module.exports = function (sequelize, DataTypes) {
         }
       }
     }
-  }, {
-    classMethods: {
-      associate: function (models) {
-        Device.belongsTo(models.Account, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'account_id',
-            allowNull: false,
-            unique: true
-          }
-        });
-        Device.belongsToMany(models.Fleet, {
-          through: 'FleetDevice',
-          as: 'Fleets'
-        })
-      },
-      luhnChecksum: function (value) {
-        var nCheck = 0, bEven = false;
-        value = value.replace(/\D/g, "");
-        for (var n = value.length - 1; n >= 0; n--) {
-          var cDigit = value.charAt(n);
-          var nDigit = parseInt(cDigit, 10);
-          if (bEven) {
-            if ((nDigit *= 2) > 9) nDigit -= 9;
-          }
-          nCheck += nDigit;
-          bEven = !bEven;
-        }
-        return (nCheck % 10) === 0;
-      },
-      getFleetDevices: function (fleetName) {
-        return new Promise(function (resolve, reject) {
-          sequelize.models.Fleet.findOne({
-            where: {
-              name: fleetName
-            }
-          }).then(function (fleet) {
-            Device.findAll({
-              where: {
-                fleets: {
-                  $in: fleet.getDescendants()
-                }
-              }
-            }).then(function (users) {
-              resolve(users);
-            });
-          });
-        });
-      }
-    }
   });
+  Device.associate = (models) => {
+    Device.belongsTo(models.Account, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'account_id',
+        allowNull: false,
+        unique: true
+      }
+    });
+    Device.belongsToMany(models.Fleet, {
+      through: 'FleetDevice',
+      as: 'Fleets'
+    })
+  };
+  Device.luhnChecksum = (value) => {
+    let nCheck = 0, bEven = false;
+    value = value.replace(/\D/g, "");
+    for (let n = value.length - 1; n >= 0; n--) {
+      let cDigit = value.charAt(n);
+      let nDigit = parseInt(cDigit, 10);
+      if (bEven) {
+        if ((nDigit *= 2) > 9) nDigit -= 9;
+      }
+      nCheck += nDigit;
+      bEven = !bEven;
+    }
+    return (nCheck % 10) === 0;
+  };
+  Device.getFleetDevices = (fleetName) => {
+    return new Promise(function (resolve, reject) {
+      sequelize.models.Fleet.findOne({
+        where: {
+          name: fleetName
+        }
+      }).then(function (fleet) {
+        Device.findAll({
+          where: {
+            fleets: {
+              $in: fleet.getDescendants()
+            }
+          }
+        }).then(function (users) {
+          resolve(users);
+        });
+      });
+    });
+  };
   return Device;
 };
 

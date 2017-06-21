@@ -1,6 +1,6 @@
 'use strict';
-module.exports = function(sequelize, DataTypes) {
-  var Log = sequelize.define('Log', {
+module.exports = (sequelize, DataTypes) => {
+  const Log = sequelize.define('Log', {
     timestamp: DataTypes.DATE,
     level: {
       type: DataTypes.ENUM('ERROR', 'WARN', 'INFO', 'DEBUG'),
@@ -10,33 +10,28 @@ module.exports = function(sequelize, DataTypes) {
       type: DataTypes.TEXT,
       defaultValue: ''
     }
-  }, {
-    classMethods: {
-      associate: function(models) {
-        Log.belongsTo(models.Journey, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'journey_id',
-            allowNull: true
-          }
-        });
-        Log.belongsTo(models.Device, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'device_id',
-            allowNull: false
-          }
-        });
-      }
-    },
-    instanceMethods: {
-      LEVEL: {
-        ERROR: 'ERROR',
-        WARN: 'WARN',
-        INFO: 'INFO',
-        DEBUG: 'DEBUG'
-      }
-    }
   });
+  Log.associate = (models) => {
+    Log.belongsTo(models.Journey, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'journey_id',
+        allowNull: true
+      }
+    });
+    Log.belongsTo(models.Device, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'device_id',
+        allowNull: false
+      }
+    });
+  };
+  Log.LEVEL = {
+    ERROR: 'ERROR',
+    WARN: 'WARN',
+    INFO: 'INFO',
+    DEBUG: 'DEBUG'
+  };
   return Log;
 };

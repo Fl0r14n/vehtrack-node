@@ -1,15 +1,15 @@
-var passport = require('passport');
-var passportLocal = require('passport-local');
-var jwt = require('jsonwebtoken');
-var ejwt = require('express-jwt');
-var express = require('express');
-var router = express.Router();
-var models = require('../models');
+const passport = require('passport');
+const passportLocal = require('passport-local');
+const jwt = require('jsonwebtoken');
+const ejwt = require('express-jwt');
+const express = require('express');
+const router = express.Router();
+const models = require('../models');
 
-var env = process.env.NODE_ENV || 'development';
-var config = require('../config.json')[env]['jwt'];
+const env = process.env.NODE_ENV || 'development';
+const config = require('../config/config.json')[env]['jwt'];
 
-passport.use(new passportLocal.LocalStrategy(function (email, password, next) {
+passport.use(new passportLocal.Strategy(function (email, password, next) {
   models.Account.findOne({email: email}).then(function (account) {
     if (!account) return next(null, false);
     return next(null, account.authenticate(password) ? account : false);
@@ -51,6 +51,6 @@ router.post('/register', function (req, res, next) {
   });
 });
 
-exports.auth = passport.initialize();
-exports.login = router;
-exports.jwt = ejwt({secret: secret, userProperty: 'tokenPayload'}).unless({path: ['/login']});
+exports.passport = passport.initialize();
+exports.router = router;
+exports.ejwt = ejwt({secret: config.secret, userProperty: 'tokenPayload'}).unless({path: ['/login']});

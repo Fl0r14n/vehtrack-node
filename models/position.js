@@ -1,6 +1,6 @@
 'use strict';
-module.exports = function (sequelize, DataTypes) {
-  var Position = sequelize.define('Position', {
+module.exports = (sequelize, DataTypes) => {
+  const Position = sequelize.define('Position', {
     latitude: {
       type: DataTypes.FLOAT,
       validate: {
@@ -22,25 +22,22 @@ module.exports = function (sequelize, DataTypes) {
       type: DataTypes.FLOAT,
       defaultValue: 0.0
     }
-  }, {
-    classMethods: {
-      associate: function (models) {
-        Position.belongsTo(models.Journey, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'journey_id',
-            allowNull: true
-          }
-        });
-        Position.belongsTo(models.Device, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'device_id',
-            allowNull: false
-          }
-        });
-      }
-    }
   });
+  Position.associate = (models) => {
+    Position.belongsTo(models.Journey, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'journey_id',
+        allowNull: true
+      }
+    });
+    Position.belongsTo(models.Device, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'device_id',
+        allowNull: false
+      }
+    });
+  };
   return Position;
 };

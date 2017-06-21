@@ -1,6 +1,6 @@
 'use strict';
-module.exports = function (sequelize, DataTypes) {
-  var Journey = sequelize.define('Journey', {
+module.exports = (sequelize, DataTypes) => {
+  const Journey = sequelize.define('Journey', {
     startLatitude: {
       type: DataTypes.FLOAT,
       validate: {
@@ -57,34 +57,29 @@ module.exports = function (sequelize, DataTypes) {
       type: DataTypes.FLOAT,
       description: 'ms'
     }
-  }, {
-    classMethods: {
-      associate: function (models) {
-        Journey.belongsTo(models.Device, {
-          onDelete: 'CASCADE',
-          foreignKey: {
-            name: 'device_id',
-            allowNull: false
-          }
-        });
-      },
-      haversine: function (startLat, startLng, stopLat, stopLng) {
-        var degreeToRad = Math.PI / 180.0;
-        var dLat = (stopLat - startLat) * degreeToRad;
-        var dLong = (stopLng - startLng) * degreeToRad;
-        var a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(startLat * degreeToRad) *
-          Math.cos(stopLat * degreeToRad) * Math.pow(Math.sin(dLong / 2), 2);
-        var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return 6367 * c; //km
-      }
-    },
-    hooks: {
-      beforeSave: function (journey, options, done) {
-        journey.duration = Journey.haversine(journey.startLatitude, journey.startLongitude, journey.stopLatitude, journey.stopLongitude);
-        journey.duration = journey.stopTimestamp - journey.startTimestamp;
-        return done(null, journey);
-      }
-    }
   });
+  Journey.associate = (models) => {
+    Journey.belongsTo(models.Device, {
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'device_id',
+        allowNull: false
+      }
+    });
+  };
+  Journey._haversine = (startLat, startLng, stopLat, stopLng) => {
+    let degreeToRad = Math.PI / 180.0;
+    let dLat = (stopLat - startLat) * degreeToRad;
+    let dLong = (stopLng - startLng) * degreeToRad;
+    let a = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(startLat * degreeToRad) *
+      Math.cos(stopLat * degreeToRad) * Math.pow(Math.sin(dLong / 2), 2);
+    let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return 6367 * c; //km
+  };
+  Journey.beforeSave = (journey, options, done) => {
+    journey.duration = Journey._haversine(journey.startLatitude, journey.startLongitude, journey.stopLatitude, journey.stopLongitude);
+    journey.duration = journey.stopTimestamp - journey.startTimestamp;
+    return done(null, journey);
+  };
   return Journey;
 };
