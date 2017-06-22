@@ -32,11 +32,10 @@ module.exports = (sequelize, DataTypes) => {
   Account.tableName = 'accounts';
   Account.associate = (models) => {
     Account.belongsTo(models.AccountRole, {
-      as: 'Role',
+      as: 'role',
       onDelete: 'CASCADE',
       foreignKey: {
         name: 'role_id',
-        allowNull: false
       }
     })
   };

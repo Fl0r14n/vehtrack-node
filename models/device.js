@@ -73,15 +73,15 @@ module.exports = (sequelize, DataTypes) => {
   Device.tableName = 'devices';
   Device.associate = (models) => {
     Device.belongsTo(models.Account, {
+      as: 'account',
       onDelete: 'CASCADE',
       foreignKey: {
-        name: 'account_id',
-        allowNull: false,
+        name: 'account_ptr_id',
         unique: true
       }
     });
     Device.belongsToMany(models.Fleet, {
-      as: 'Fleets',
+      as: 'fleets',
       through: 'devices_fleets',
       foreignKey: 'device_id',
       otherKey: 'fleet_id'

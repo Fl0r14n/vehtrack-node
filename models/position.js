@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   Position.tableName = 'positions';
   Position.associate = (models) => {
     Position.belongsTo(models.Journey, {
+      as: 'journey',
       onDelete: 'CASCADE',
       foreignKey: {
         name: 'journey_id',
@@ -33,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
     Position.belongsTo(models.Device, {
+      as: 'device',
       onDelete: 'CASCADE',
       foreignKey: {
         name: 'device_id',

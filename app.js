@@ -25,6 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(auth.passport);
 app.use(auth.ejwt);
+app.use(auth.addAccountToRequest);
 app.use('/auth', auth.router);
 
 

@@ -15,52 +15,66 @@ let randint = (min, max) => {
 };
 
 const generateRoles = () => {
-  return models.AccountRole.bulkCreate([
-    {
-      name: 'ADMIN',
-      description: 'Super user'
-    },
-    {
-      name: 'FLEET_ADMIN',
-      description: 'Fleet Administrator'
-    },
-    {
-      name: 'USER',
-      description: 'User'
-    },
-    {
-      name: 'DEVICE',
-      description: 'Device'
-    }
-  ]);
+  return new Promise((resolve, reject) => {
+    return models.AccountRole.bulkCreate([
+      {
+        name: 'ADMIN',
+        description: 'Super user'
+      },
+      {
+        name: 'FLEET_ADMIN',
+        description: 'Fleet Administrator'
+      },
+      {
+        name: 'USER',
+        description: 'User'
+      },
+      {
+        name: 'DEVICE',
+        description: 'Device'
+      }
+    ]).then(() => {
+      resolve(models.AccountRole.findAll());
+    }).catch((e) => {
+      resolve(models.AccountRole.findAll());
+    });
+  })
 };
 
-const generateUsers = () => {
-  models.AccountRole.findAll().then((roles) => {
-    console.log(roles);
+const generateUsers = (roles) => {
+  return new Promise((resolve, reject) => {
     let users = [];
     for (let i = 0; i < TOTAL_USERS; i++) {
       const username = `user_${i}`;
       const email = username + DOMAIN;
       const password = `pass_${i}`;
       const role = roles[randint(0, roles.length)];
-      users.push({
+      models.User.create({
         username: username,
-        email: email,
-        password: password,
-        role: role
-      });
+        account: {
+          email: email,
+          password: password,
+          role: role
+        }
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      }).then((user) => {
+        users.push(user);
+        if (i === TOTAL_USERS - 1) {
+          resolve(users);
+        }
+      })
     }
-    return models.User.bulkCreate(users)
   });
 };
 
 // main
 generateRoles().then((roles) => {
-  console.log(roles);
-});
-
-models.User.findAll().then((users) => {
-  console.log(users);
+  generateUsers(roles).then((users) => {
+    console.log(users);
+  });
 });
 

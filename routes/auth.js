@@ -51,6 +51,20 @@ router.post('/register', function (req, res, next) {
   });
 });
 
+const addAccountToRequest = (req, res, next) => {
+  if (req.tokenPayload) {
+    models.Account.findById(req.tokenPayload.email).then((account) => {
+      if (account) {
+        req.account = account;
+        return next();
+      } else {
+        return res.status(401).json({status: 'error', code: 'unauthorized'});
+      }
+    });
+  }
+};
+
 exports.passport = passport.initialize();
 exports.router = router;
 exports.ejwt = ejwt({secret: config.secret, userProperty: 'tokenPayload'}).unless({path: ['/login']});
+exports.addAccountToRequest = addAccountToRequest;

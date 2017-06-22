@@ -11,10 +11,10 @@ module.exports = (sequelize, DataTypes) => {
   User.tableName = 'users';
   User.associate = (models) => {
     User.belongsTo(models.Account, {
+      as: 'account',
       onDelete: 'CASCADE',
       foreignKey: {
-        name: 'account_id',
-        allowNull: false,
+        name: 'account_ptr_id',
         unique: true
       }
     });

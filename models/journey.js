@@ -69,6 +69,7 @@ module.exports = (sequelize, DataTypes) => {
   Journey.tableName = 'journeys';
   Journey.associate = (models) => {
     Journey.belongsTo(models.Device, {
+      as: 'device',
       onDelete: 'CASCADE',
       foreignKey: {
         name: 'device_id',

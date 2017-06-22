@@ -16,13 +16,13 @@ module.exports = (sequelize, DataTypes) => {
   Fleet.tableName = 'fleets';
   Fleet.associate = (models) => {
     Fleet.belongsToMany(models.User, {
-      as: 'Users',
+      as: 'users',
       through: 'devices_fleets',
       foreignKey: 'fleet_id',
       otherKey: 'user_id'
     });
     Fleet.belongsToMany(models.Device, {
-      as: 'Devices',
+      as: 'devices',
       through: 'users_fleets',
       foreignKey: 'fleet_id',
       otherKey: 'device_id'
