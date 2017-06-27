@@ -5,14 +5,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(30),
       unique: true
     },
-    type: DataTypes.STRING(30),
+    type: {
+      type:DataTypes.STRING(30),
+      defaultValue: ''
+    },
     description: {
       type: DataTypes.STRING,
       defaultValue: ''
     },
     phone: {
       type: DataTypes.STRING(12),
-      defaultValue: '',
+      allowNull: true,
+      defaultValue: null,
       validate: {
         is: {
           args: /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/,
@@ -22,11 +26,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     plate: {
       type: DataTypes.STRING(30),
-      defaultValue: ''
+      allowNull: true,
+      defaultValue: null
     },
     vin: {
       type: DataTypes.STRING(17),
-      defaultValue: '',
+      allowNull: true,
+      defaultValue: null,
       validate: {
         is: {
           args: /^[0-9A-Z-[IOQ]]{17}$/,
@@ -36,7 +42,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     imei: {
       type: DataTypes.STRING(15),
-      defaultValue: '',
+      allowNull: true,
+      defaultValue: null,
       validate: {
         is: {
           args: /^[0-9]{15}$/,
@@ -51,7 +58,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     imsi: {
       type: DataTypes.STRING(15),
-      defaultValue: '',
+      allowNull: true,
+      defaultValue: null,
       validate: {
         is: {
           args: /^[0-9]{14,15}$/,
@@ -61,7 +69,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     msisdn: {
       type: DataTypes.STRING(14),
-      defaultValue: '',
+      allowNull: true,
+      defaultValue: null,
       validate: {
         is: {
           args: /^[1-9]\d{6,14}$/,

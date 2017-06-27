@@ -1,13 +1,11 @@
 'use strict';
 
-const readline = require('readline');
 const L = require('./logger');
 const http = require('http');
 const concat = require('concat-stream');
 const querystring = require('querystring');
 const xml2json = require('xml2json');
 const models = require('./models');
-const Readable = require('stream').Readable;
 
 const DOMAIN = '@vehtrack.com';
 const TOTAL_USERS = 10;
@@ -61,16 +59,16 @@ const generateRoles = () => {
     ]).then(() => {
       resolve(models.AccountRole.findAll({
         where: {
-          $not: {
-            name: 'ADMIN'
+          name: {
+            $notIn: ['ADMIN', 'DEVICE']
           }
         }
       }));
     }).catch((e) => {
       resolve(models.AccountRole.findAll({
         where: {
-          $not: {
-            name: 'ADMIN'
+          name: {
+            $notIn: ['ADMIN', 'DEVICE']
           }
         }
       }));
@@ -85,13 +83,13 @@ const generateUsers = (roles) => {
       const username = `user_${i}`;
       const email = username + DOMAIN;
       const password = `pass_${i}`;
-      const role = roles[randint(0, roles.length)];
+      const role = roles[randint(0, roles.length - 1)];
       models.User.create({
         username: username,
         account: {
           email: email,
           password: password,
-          role: role
+          role_id: role.name
         }
       }, {
         include: [{
@@ -103,7 +101,23 @@ const generateUsers = (roles) => {
         if (i === TOTAL_USERS - 1) {
           resolve(users);
         }
-      })
+      }).catch((e) => {
+        if (e.name === 'SequelizeUniqueConstraintError') {
+          L.warn(`${username} already created!`);
+        } else {
+          L.error(e);
+        }
+        models.User.findOne({
+          where: {
+            username: username
+          }
+        }).then((user) => {
+          users.push(user);
+          if (i === TOTAL_USERS - 1) {
+            resolve(users);
+          }
+        });
+      });
     }
   });
 };
@@ -125,7 +139,7 @@ const generateDevices = () => {
           account: {
             email: email,
             password: password,
-            role: role
+            role_id: role.name
           }
         }, {
           include: [{
@@ -137,7 +151,23 @@ const generateDevices = () => {
           if (i === TOTAL_DEVICES - 1) {
             resolve(devices);
           }
-        })
+        }).catch((e) => {
+          if (e.name === 'SequelizeUniqueConstraintError') {
+            L.warn(`${serial} already created!`);
+          } else {
+            L.error(e);
+          }
+          models.Device.findOne({
+            where: {
+              serial: serial
+            }
+          }).then((device) => {
+            devices.push(device);
+            if (i === TOTAL_DEVICES - 1) {
+              resolve(devices);
+            }
+          });
+        });
       }
     });
   });
@@ -145,11 +175,11 @@ const generateDevices = () => {
 
 const generateJourneysForDevice = (device, startPoint, startDate, stopDate) => {
   if (!startPoint) {
-    startPoint = cities[randint(0, Object.keys(cities).length)];
+    startPoint = cities[Object.keys(cities)[randint(0, Object.keys(cities).length)]];
   }
   let endPoint;
   while (true) {
-    endPoint = cities[randint(0, Object.keys(cities).length)];
+    endPoint = cities[Object.keys(cities)[randint(0, Object.keys(cities).length)]];
     if (JSON.stringify(endPoint) !== JSON.stringify(startPoint)) {
       break;
     }
@@ -166,17 +196,17 @@ const generateJourneysForDevice = (device, startPoint, startDate, stopDate) => {
 const generateJourneyForDevice = (device, startDate, startPoint, stopPoint) => {
   return new Promise((resolve, reject) => {
     yourNavigationOrg(startPoint, stopPoint).then((kml) => {
-      const distance = kml.Document.distance; // km
+      const travelDistance = kml.Document.distance; // km
       const travelTime = kml.Document.traveltime; // sec
-      L.info(`Device: ${device.serial} Distance: ${distance} Time: ${travelTime}`);
-      if (distance > 0.5 && travelTime > 0) {
+      L.info(`Device: ${device.serial} Distance: ${travelDistance} Time: ${travelTime}`);
+      if (travelDistance > 0.5 && travelTime > 0) {
         let stopDate = new Date((startDate - 0) + travelTime * 3600000);
         const duration = travelTime * 1000; // ms
-        const distance = distance * 1000; // m
+        const distance = travelDistance * 1000; // m
         const averageSpeed = distance / travelTime;
         const maximumSpeed = averageSpeed + 30; // +30km/h
         models.Journey.create({
-          device: device,
+          device_id: device.id,
           startTimestamp: startDate,
           startLatitude: startPoint[0],
           startLongitude: startPoint[1],
@@ -199,21 +229,13 @@ const generateJourneyForDevice = (device, startDate, startPoint, stopPoint) => {
 
 const generatePointsForJourney = (device, journey, kml, startPoint, startDate, travelTime) => {
   const getPointsFromKml = (kml) => {
-    return new Promise((resolve, reject) => {
-      let points = [];
-      let inputStream = new Readable();
-      inputStream.push(kml.Document.Folder.Placemark.LineString.coordinates);
-      const lineReader = readline.createInterface({
-        input: fs.createReadStream(inputStream)
-      });
-      lineReader.on('line', (line) => {
-        const point = line.split(',');
-        points.push([Number(point[0]), Number(point[1])]);
-      });
-      lineReader.on('close', () => {
-        resolve(points);
-      })
-    });
+    const buf = kml.Document.Folder.Placemark.LineString.coordinates;
+    let points = [];
+    for (let line of buf.split('\n')) {
+      const point = line.split(',');
+      points.push([Number(point[0]), Number(point[1])]);
+    }
+    return points;
   };
   const trimPoints = (points) => {
     const totalPoints = randint(MIN_POSITIONS_JOURNEY, MAX_POSITIONS_JOURNEY);
@@ -233,42 +255,41 @@ const generatePointsForJourney = (device, journey, kml, startPoint, startDate, t
     return Math.sqrt(Math.pow((dstPoint[0] - srcPoint[0]) * 111.2, 2) + Math.pow((dstPoint[1] - srcPoint[1]) * 100.7, 2));
   };
 
-  getPointsFromKml(kml).then((points) => {
-    const trimmedPoints = trimPoints(points);
-    let timeStep = travelTime / trimmedPoints.length;
-    let timestamp = startDate;
-    let lastPoint = startPoint;
-    let positions = [];
-    for (let point of trimmedPoints) {
-      const dst = calculateDistance(lastPoint, point);
-      const speed = dst * 3600 / timeStep;
-      positions.push({
-        device: device,
-        journey: journey,
-        latitude: point[0],
-        longitude: point[1],
-        timestamp: timestamp,
-        speed: speed
-      });
-      lastPoint = point;
-      timestamp = new Date((timestamp - 0) + (timeStep * 1000));
-    }
-    models.Position.createBulk(positions);
-  })
+  let points = getPointsFromKml(kml);
+  const trimmedPoints = trimPoints(points);
+  let timeStep = travelTime / trimmedPoints.length;
+  let timestamp = startDate;
+  let lastPoint = startPoint;
+  let positions = [];
+  for (let point of trimmedPoints) {
+    const dst = calculateDistance(lastPoint, point);
+    const speed = dst * 3600 / timeStep;
+    positions.push({
+      device_id: device.id,
+      journey_id: journey.id,
+      latitude: point[0],
+      longitude: point[1],
+      timestamp: timestamp,
+      speed: speed
+    });
+    lastPoint = point;
+    timestamp = new Date((timestamp - 0) + (timeStep * 1000));
+  }
+  models.Position.bulkCreate(positions);
 };
 
 const generateLogsForJourney = (device, journey) => {
   let logs = [];
   for (let i = 0; i < randint(0, MAX_LOGS_JOURNEY); i++) {
-    const level = levels[randint(0, levels.length)];
+    const level = levels[randint(0, levels.length - 1)];
     const message = `Message: ${models.Log.LEVEL[level]}`;
     const timestamp = journey.startTimestamp;
     logs.push({
-      device: device,
-      journey: journey,
+      device_id: device.id,
+      journey_id: journey.id,
       level: level,
       message: message,
-      timestamp: timestap,
+      timestamp: timestamp,
     });
     models.Log.bulkCreate(logs);
   }
@@ -304,14 +325,16 @@ const yourNavigationOrg = (start, stop) => {
   return execute(buildUrl(start, stop));
 };
 
-
 // main
-generateRoles().then((roles) => {
-  generateUsers(roles).then((users) => {
+models.sequelize.sync().then(function () {
+  generateRoles().then((roles) => {
+    generateUsers(roles).then((users) => {
+    });
+    generateDevices().then((devices) => {
+      for (let device of devices) {
+        generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
+        return
+      }
+    })
   });
-  generateDevices().then((devices) => {
-    for (let device of devices) {
-      generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
-    }
-  })
 });
