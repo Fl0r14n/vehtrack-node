@@ -15,7 +15,7 @@ const MIN_POSITIONS_JOURNEY = 100;
 const MAX_POSITIONS_JOURNEY = 150;
 const MAX_LOGS_JOURNEY = 5;
 const START_DATE = new Date();
-START_DATE.setMonth(-5);
+START_DATE.setMonth(START_DATE.getMonth() - 1);
 const STOP_DATE = new Date();
 
 const cities = {
@@ -28,9 +28,9 @@ const cities = {
   Constanta: [44.179496, 28.63993],
   Bucuresti: [44.427283, 26.092773],
   Craiova: [44.316234, 23.801681],
-  Sibiu: [45.791946, 24.142059],
+  Sibiu: [45.791946, 24.142059]
 };
-
+const cityNames = Object.keys(cities);
 const levels = Object.keys(models.Log.LEVEL);
 
 let randint = (min, max) => {
@@ -65,13 +65,8 @@ const generateRoles = () => {
         }
       }));
     }).catch((e) => {
-      resolve(models.AccountRole.findAll({
-        where: {
-          name: {
-            $notIn: ['ADMIN', 'DEVICE']
-          }
-        }
-      }));
+      L.error(e);
+      reject(e);
     });
   })
 };
@@ -175,55 +170,63 @@ const generateDevices = () => {
 
 const generateJourneysForDevice = (device, startPoint, startDate, stopDate) => {
   if (!startPoint) {
-    startPoint = cities[Object.keys(cities)[randint(0, Object.keys(cities).length)]];
+    const startCity = cityNames[randint(0, cityNames.length - 1)];
+    startPoint = cities[startCity];
   }
-  let endPoint;
-  while (true) {
-    endPoint = cities[Object.keys(cities)[randint(0, Object.keys(cities).length)]];
-    if (JSON.stringify(endPoint) !== JSON.stringify(startPoint)) {
-      break;
-    }
+  let stopCity = cityNames[randint(0, cityNames.length - 1)];
+  let stopPoint = cities[stopCity];
+  while (JSON.stringify(startPoint) === JSON.stringify(stopPoint)) {
+    stopCity = cityNames[randint(0, cityNames.length - 1)];
+    stopPoint = cities[stopCity];
   }
-  generateJourneyForDevice(device, startDate, startPoint, endPoint).then((journey) => {
-    startPoint = endPoint;
-    startDate = (startDate - 0) + journey.duration + 3600000;
+  generateJourneyForDevice(device, startDate, startPoint, stopPoint).then((journey) => {
+    startPoint = stopPoint;
+    startDate = new Date((startDate - 0) + journey.duration + 3600000);
     if (startDate < stopDate) {
       generateJourneysForDevice(device, startPoint, startDate, stopDate);
     }
+  }).catch((e) => {
+    L.error(e);
   });
 };
 
 const generateJourneyForDevice = (device, startDate, startPoint, stopPoint) => {
   return new Promise((resolve, reject) => {
-    yourNavigationOrg(startPoint, stopPoint).then((kml) => {
-      const travelDistance = kml.Document.distance; // km
-      const travelTime = kml.Document.traveltime; // sec
-      L.info(`Device: ${device.serial} Distance: ${travelDistance} Time: ${travelTime}`);
-      if (travelDistance > 0.5 && travelTime > 0) {
-        let stopDate = new Date((startDate - 0) + travelTime * 3600000);
-        const duration = travelTime * 1000; // ms
-        const distance = travelDistance * 1000; // m
-        const averageSpeed = distance / travelTime;
-        const maximumSpeed = averageSpeed + 30; // +30km/h
-        models.Journey.create({
-          device_id: device.id,
-          startTimestamp: startDate,
-          startLatitude: startPoint[0],
-          startLongitude: startPoint[1],
-          stopTimestamp: stopDate,
-          stopLatitude: stopPoint[0],
-          stopLongitude: stopPoint[1],
-          duration: duration,
-          distance: distance,
-          averageSpeed: averageSpeed,
-          maximumSpeed: maximumSpeed
-        }).then((journey) => {
-          generatePointsForJourney(device, journey, kml, startPoint, startDate, travelTime);
-          generateLogsForJourney(device, journey);
-          resolve(journey);
-        })
-      }
-    });
+    if (startPoint && stopPoint) {
+      yourNavigationOrg(startPoint, stopPoint).then((kml) => {
+        const travelDistance = kml.Document.distance; // km
+        const travelTime = kml.Document.traveltime; // sec
+        L.info(`Device: ${device.serial} Distance: ${travelDistance}km Time: ${travelTime / 60 }h`);
+        if (travelDistance > 0.5 && travelTime > 0) {
+          let stopDate = new Date((startDate - 0) + travelTime * 230400000);
+          const duration = travelTime * 1000; // ms
+          const distance = travelDistance * 1000; // m
+          const averageSpeed = distance / travelTime;
+          const maximumSpeed = averageSpeed + 30; // +30km/h
+          models.Journey.create({
+            device_id: device.id,
+            startTimestamp: startDate,
+            startLatitude: startPoint[0],
+            startLongitude: startPoint[1],
+            stopTimestamp: stopDate,
+            stopLatitude: stopPoint[0],
+            stopLongitude: stopPoint[1],
+            duration: duration,
+            distance: distance,
+            averageSpeed: averageSpeed,
+            maximumSpeed: maximumSpeed
+          }).then((journey) => {
+            generatePointsForJourney(device, journey, kml, startPoint, startDate, travelTime);
+            generateLogsForJourney(device, journey);
+            resolve(journey);
+          }).catch((e) => {
+            reject(e);
+          })
+        }
+      });
+    } else {
+      reject(`Device: ${device.serial} Start Date: ${startDate.toString()} Start Point: ${startPoint} Stop Point: ${stopPoint}`);
+    }
   });
 };
 
@@ -297,29 +300,35 @@ const generateLogsForJourney = (device, journey) => {
 
 const yourNavigationOrg = (start, stop) => {
   const buildUrl = (start, stop) => {
-    return {
-      hostname: 'http://www.yournavigation.org',
-      path: '/api/dev/route.php',
-      params: querystring.stringify({
-        flat: start[0],
-        flon: start[1],
-        tlat: stop[0],
-        tlon: stop[1],
-        v: 'motorcar',
-        fast: 1,
-        layer: 'mapnik',
-        instructions: 0
-      })
+    if (start && stop) {
+      return {
+        hostname: 'http://www.yournavigation.org',
+        path: '/api/dev/route.php',
+        params: querystring.stringify({
+          flat: start[0],
+          flon: start[1],
+          tlat: stop[0],
+          tlon: stop[1],
+          v: 'motorcar',
+          fast: 1,
+          layer: 'mapnik',
+          instructions: 0
+        })
+      }
     }
   };
   const execute = (urlPath) => {
     return new Promise((resolve, reject) => {
-      http.get(`${urlPath.hostname}${urlPath.path}?${urlPath.params}`, (res) => {
-        res.pipe(concat((body) => {
-          const obj = JSON.parse(xml2json.toJson(body.toString()));
-          resolve(obj.kml);
-        }));
-      });
+      if (urlPath) {
+        http.get(`${urlPath.hostname}${urlPath.path}?${urlPath.params}`, (res) => {
+          res.pipe(concat((body) => {
+            const obj = JSON.parse(xml2json.toJson(body.toString()));
+            resolve(obj.kml);
+          }));
+        });
+      } else {
+        reject('yournavigation.org url does not exist');
+      }
     });
   };
   return execute(buildUrl(start, stop));
@@ -333,7 +342,6 @@ models.sequelize.sync().then(function () {
     generateDevices().then((devices) => {
       for (let device of devices) {
         generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
-        return
       }
     })
   });
