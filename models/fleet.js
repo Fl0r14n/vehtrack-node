@@ -3,9 +3,6 @@ module.exports = (sequelize, DataTypes) => {
   const Fleet = sequelize.define('Fleet', {
     name: {
       type: DataTypes.STRING(64),
-      validate: {
-        is: /^[\w.@+-]+$/
-      }
     },
     parentId: {
       type: DataTypes.INTEGER,
@@ -17,13 +14,13 @@ module.exports = (sequelize, DataTypes) => {
   Fleet.associate = (models) => {
     Fleet.belongsToMany(models.User, {
       as: 'users',
-      through: 'devices_fleets',
+      through: 'users_fleets',
       foreignKey: 'fleet_id',
       otherKey: 'user_id'
     });
     Fleet.belongsToMany(models.Device, {
       as: 'devices',
-      through: 'users_fleets',
+      through: 'devices_fleets',
       foreignKey: 'fleet_id',
       otherKey: 'device_id'
     })

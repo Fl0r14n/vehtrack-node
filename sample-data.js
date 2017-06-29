@@ -7,6 +7,7 @@ const querystring = require('querystring');
 const xml2json = require('xml2json');
 const models = require('./models');
 
+const GENERATE_WITH_FLEETS = true;
 const DOMAIN = '@vehtrack.com';
 const TOTAL_USERS = 10;
 const TOTAL_DEVICES = 100;
@@ -71,15 +72,68 @@ const generateRoles = () => {
   })
 };
 
-const generateUsers = (roles) => {
-  return new Promise((resolve, reject) => {
-    let users = [];
-    for (let i = 0; i < TOTAL_USERS; i++) {
-      const username = `user_${i}`;
-      const email = username + DOMAIN;
-      const password = `pass_${i}`;
-      const role = roles[randint(0, roles.length - 1)];
-      models.User.create({
+const generateFleets = async () => {
+
+  const generateFleet = async (parent, depth, fleetList) => {
+    // add child siblings
+    let sibling = 0;
+    while (randint(0, 1) === 1) {
+      const childName = `${parent.name}_(d:${depth}_s:${sibling})`;
+      L.info(childName);
+
+      let childFleet;
+      try {
+        childFleet = await models.Fleet.create({
+          name: childName,
+          parentId: parent.parentId
+        });
+      } catch (err) {
+        L.error(err);
+      }
+      if (fleetList && childFleet) {
+        fleetList.push(childFleet);
+      }
+      sibling += 1;
+      // add children to child
+      if (randint(0, 1) === 1) {
+        await generateFleet(childFleet, depth + 1)
+      }
+    }
+  };
+
+  L.info('Generating fleets=============================================');
+  let fleets = [];
+  for (let group = 0; group < TOTAL_FLEETS; group++) {
+    const name = `fg:${group}`;
+    L.info(name);
+    let fleet;
+    try {
+      fleet = await models.Fleet.create({
+        name: name
+      });
+      fleets.push(fleet);
+    } catch (err) {
+      L.error(err);
+    }
+    await generateFleet(fleet, 1, fleets);
+  }
+
+  return fleets;
+};
+
+const generateUsersForFleets = async (fleets, roles) => {
+  L.info('Generating users for fleets=====================================');
+  let users = [];
+  for (let fleet of fleets) {
+    L.debug(`Fleet: ${fleet.name}`);
+    let userId = await models.User.count();
+    const username = `user_${userId}`;
+    const email = username + DOMAIN;
+    const password = `pass_${userId}`;
+    const role = roles[randint(0, roles.length - 1)];
+    let user;
+    try {
+      user = await models.User.create({
         username: username,
         account: {
           email: email,
@@ -91,143 +145,206 @@ const generateUsers = (roles) => {
           model: models.Account,
           as: 'account'
         }]
-      }).then((user) => {
-        users.push(user);
-        if (i === TOTAL_USERS - 1) {
-          resolve(users);
+      });
+    } catch (e) {
+      if (e.name === 'SequelizeUniqueConstraintError') {
+        L.warn(`${username} already created!`);
+      } else {
+        L.error(e);
+      }
+      user = await models.User.findOne({
+        where: {
+          username: username
         }
-      }).catch((e) => {
-        if (e.name === 'SequelizeUniqueConstraintError') {
-          L.warn(`${username} already created!`);
-        } else {
-          L.error(e);
+      })
+    }
+    // assign user to fleet
+    let userFleets = await user.getFleets();
+    userFleets.push(fleet);
+    await user.setFleets(userFleets);
+    users.push(user);
+  }
+  return users;
+};
+
+const generateDevicesForFleets = async (fleets) => {
+  L.info('Generating devices for fleets==================================');
+  let role = await models.AccountRole.findById('DEVICE');
+  let devices = [];
+  for (let fleet of fleets) {
+    L.debug(`Fleet: ${fleet.name}`);
+    let deviceId = await models.Device.count();
+    const serial = `serial_${deviceId}`;
+    const type = `mk_${deviceId % 3}`;
+    const description = 'This is a mock device';
+    const email = `device_${deviceId}${DOMAIN}`;
+    const password = `device_${deviceId}`;
+    let device;
+    try {
+      device = await models.Device.create({
+        serial: serial,
+        type: type,
+        description: description,
+        account: {
+          email: email,
+          password: password,
+          role_id: role.name
         }
-        models.User.findOne({
-          where: {
-            username: username
-          }
-        }).then((user) => {
-          users.push(user);
-          if (i === TOTAL_USERS - 1) {
-            resolve(users);
-          }
-        });
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      });
+    } catch (e) {
+      if (e.name === 'SequelizeUniqueConstraintError') {
+        L.warn(`${serial} already created!`);
+      } else {
+        L.error(e);
+      }
+      device = await models.Device.findOne({
+        where: {
+          serial: serial
+        }
+      })
+    }
+    let deviceFleets = await device.getFleets();
+    deviceFleets.push(fleet);
+    await device.setFleets(deviceFleets);
+    devices.push(device);
+  }
+  return devices;
+};
+
+const generateUsers = async (roles) => {
+  let users = [];
+  for (let i = 0; i < TOTAL_USERS; i++) {
+    const username = `user_${i}`;
+    const email = username + DOMAIN;
+    const password = `pass_${i}`;
+    const role = roles[randint(0, roles.length - 1)];
+    let user;
+    try {
+      user = await models.User.create({
+        username: username,
+        account: {
+          email: email,
+          password: password,
+          role_id: role.name
+        }
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      });
+    } catch (e) {
+      if (e.name === 'SequelizeUniqueConstraintError') {
+        L.warn(`${username} already created!`);
+      } else {
+        L.error(e);
+      }
+      user = await models.User.findOne({
+        where: {
+          username: username
+        }
+      })
+    }
+    users.push(user);
+  }
+  return users;
+};
+
+const generateDevices = async () => {
+  let devices = [];
+  let role = await models.AccountRole.findById('DEVICE');
+  for (let i = 0; i < TOTAL_DEVICES; i++) {
+    const serial = `serial_${i}`;
+    const type = `mk_${i % 3}`;
+    const description = 'This is a mock device';
+    const email = `device_${i}${DOMAIN}`;
+    const password = `device_${i}`;
+    let device;
+    try {
+      device = await models.Device.create({
+        serial: serial,
+        type: type,
+        description: description,
+        account: {
+          email: email,
+          password: password,
+          role_id: role.name
+        }
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      });
+    } catch (e) {
+      if (e.name === 'SequelizeUniqueConstraintError') {
+        L.warn(`${serial} already created!`);
+      } else {
+        L.error(e);
+      }
+      device = await models.Device.findOne({
+        where: {
+          serial: serial
+        }
       });
     }
-  });
+    devices.push(device);
+  }
+  return devices;
 };
 
-const generateDevices = () => {
-  return new Promise((resolve, reject) => {
-    let devices = [];
-    models.AccountRole.findById('DEVICE').then((role) => {
-      for (let i = 0; i < TOTAL_DEVICES; i++) {
-        const serial = `serial_${i}`;
-        const type = `mk_${i % 3}`;
-        const description = 'This is a mock device';
-        const email = `device_${i}${DOMAIN}`;
-        const password = `device_${i}`;
-        models.Device.create({
-          serial: serial,
-          type: type,
-          description: description,
-          account: {
-            email: email,
-            password: password,
-            role_id: role.name
-          }
-        }, {
-          include: [{
-            model: models.Account,
-            as: 'account'
-          }]
-        }).then((device) => {
-          devices.push(device);
-          if (i === TOTAL_DEVICES - 1) {
-            resolve(devices);
-          }
-        }).catch((e) => {
-          if (e.name === 'SequelizeUniqueConstraintError') {
-            L.warn(`${serial} already created!`);
-          } else {
-            L.error(e);
-          }
-          models.Device.findOne({
-            where: {
-              serial: serial
-            }
-          }).then((device) => {
-            devices.push(device);
-            if (i === TOTAL_DEVICES - 1) {
-              resolve(devices);
-            }
-          });
-        });
-      }
-    });
-  });
-};
-
-const generateJourneysForDevice = (device, startPoint, startDate, stopDate) => {
-  if (!startPoint) {
-    const startCity = cityNames[randint(0, cityNames.length - 1)];
-    startPoint = cities[startCity];
-  }
-  let stopCity = cityNames[randint(0, cityNames.length - 1)];
-  let stopPoint = cities[stopCity];
-  while (JSON.stringify(startPoint) === JSON.stringify(stopPoint)) {
-    stopCity = cityNames[randint(0, cityNames.length - 1)];
-    stopPoint = cities[stopCity];
-  }
-  generateJourneyForDevice(device, startDate, startPoint, stopPoint).then((journey) => {
+const generateJourneysForDevice = async (device, startDate, stopDate) => {
+  let journeys = [];
+  const startCity = cityNames[randint(0, cityNames.length - 1)];
+  let startPoint = cities[startCity];
+  while (startDate < stopDate) {
+    let stopCity = cityNames[randint(0, cityNames.length - 1)];
+    let stopPoint = cities[stopCity];
+    while (JSON.stringify(startPoint) === JSON.stringify(stopPoint)) {
+      stopCity = cityNames[randint(0, cityNames.length - 1)];
+      stopPoint = cities[stopCity];
+    }
+    let journey = await generateJourneyForDevice(device, startDate, startPoint, stopPoint);
+    journeys.push(journey);
     startPoint = stopPoint;
     startDate = new Date((startDate - 0) + journey.duration + 3600000);
-    if (startDate < stopDate) {
-      generateJourneysForDevice(device, startPoint, startDate, stopDate);
-    }
-  }).catch((e) => {
-    L.error(e);
-  });
+  }
+  return journeys;
 };
 
-const generateJourneyForDevice = (device, startDate, startPoint, stopPoint) => {
-  return new Promise((resolve, reject) => {
-    if (startPoint && stopPoint) {
-      yourNavigationOrg(startPoint, stopPoint).then((kml) => {
-        const travelDistance = kml.Document.distance; // km
-        const travelTime = kml.Document.traveltime; // sec
-        L.info(`Device: ${device.serial} Distance: ${travelDistance}km Time: ${travelTime / 60 }h`);
-        if (travelDistance > 0.5 && travelTime > 0) {
-          let stopDate = new Date((startDate - 0) + travelTime * 230400000);
-          const duration = travelTime * 1000; // ms
-          const distance = travelDistance * 1000; // m
-          const averageSpeed = distance / travelTime;
-          const maximumSpeed = averageSpeed + 30; // +30km/h
-          models.Journey.create({
-            device_id: device.id,
-            startTimestamp: startDate,
-            startLatitude: startPoint[0],
-            startLongitude: startPoint[1],
-            stopTimestamp: stopDate,
-            stopLatitude: stopPoint[0],
-            stopLongitude: stopPoint[1],
-            duration: duration,
-            distance: distance,
-            averageSpeed: averageSpeed,
-            maximumSpeed: maximumSpeed
-          }).then((journey) => {
-            generatePointsForJourney(device, journey, kml, startPoint, startDate, travelTime);
-            generateLogsForJourney(device, journey);
-            resolve(journey);
-          }).catch((e) => {
-            reject(e);
-          })
-        }
-      });
-    } else {
-      reject(`Device: ${device.serial} Start Date: ${startDate.toString()} Start Point: ${startPoint} Stop Point: ${stopPoint}`);
-    }
-  });
+const generateJourneyForDevice = async (device, startDate, startPoint, stopPoint) => {
+  let kml = await yourNavigationOrg(startPoint, stopPoint);
+  const travelDistance = kml.Document.distance; // km
+  const travelTime = kml.Document.traveltime; // sec
+  L.info(`Device: ${device.serial} Distance: ${travelDistance}km Time: ${travelTime / 60 }h`);
+  if (travelDistance > 0.5 && travelTime > 0) {
+    let stopDate = new Date((startDate - 0) + travelTime * 230400000);
+    const duration = travelTime * 1000; // ms
+    const distance = travelDistance * 1000; // m
+    const averageSpeed = distance / travelTime;
+    const maximumSpeed = averageSpeed + 30; // +30km/h
+    let journey = await models.Journey.create({
+      device_id: device.id,
+      startTimestamp: startDate,
+      startLatitude: startPoint[0],
+      startLongitude: startPoint[1],
+      stopTimestamp: stopDate,
+      stopLatitude: stopPoint[0],
+      stopLongitude: stopPoint[1],
+      duration: duration,
+      distance: distance,
+      averageSpeed: averageSpeed,
+      maximumSpeed: maximumSpeed
+    });
+    generatePointsForJourney(device, journey, kml, startPoint, startDate, travelTime);
+    generateLogsForJourney(device, journey);
+    return journey;
+  }
 };
 
 const generatePointsForJourney = (device, journey, kml, startPoint, startDate, travelTime) => {
@@ -337,12 +454,24 @@ const yourNavigationOrg = (start, stop) => {
 // main
 models.sequelize.sync().then(function () {
   generateRoles().then((roles) => {
-    generateUsers(roles).then((users) => {
-    });
-    generateDevices().then((devices) => {
-      for (let device of devices) {
-        generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
-      }
-    })
+    if (GENERATE_WITH_FLEETS) {
+      generateFleets().then((fleets) => {
+        generateUsersForFleets(fleets, roles).then((users) => {
+        });
+        generateDevicesForFleets(fleets).then((devices) => {
+          for (let device of devices) {
+            generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
+          }
+        })
+      });
+    } else {
+      generateUsers(roles).then((users) => {
+      });
+      generateDevices().then((devices) => {
+        for (let device of devices) {
+          generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
+        }
+      });
+    }
   });
 });
