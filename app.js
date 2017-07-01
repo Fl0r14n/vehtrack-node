@@ -7,8 +7,12 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const passport = require('passport');
 const index = require('./routes/index');
-const users = require('./routes/users');
 const auth = require('./routes/auth');
+const users = require('./routes/users');
+const fleets = require('./routes/fleets');
+const devices = require('./routes/devices');
+const journeys = require('./routes/journeys');
+const logs = require('./routes/logs');
 
 let app = express();
 
@@ -31,7 +35,11 @@ app.use('/auth', auth.router);
 
 
 app.use('/', index);
-app.use('/users', users);
+app.use('/user', users);
+app.use('/fleet', fleets);
+app.use('/device', devices);
+app.use('/journey', journeys);
+app.use('/log', logs);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
