@@ -34,7 +34,7 @@ router.get('/', (req, res) => {
       where: {
         serial: deviceSerial
       }
-    })
+    });
   }
   if (journeyId) {
     query.include.push({
@@ -42,11 +42,13 @@ router.get('/', (req, res) => {
       where: {
         id: journeyId
       }
-    })
+    });
   }
   models.Log.findAll(query).then((logs) => {
-    res.send(logs);
-  })
+    res.json(logs);
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
 });
 
 router.post('/', (req, res) => {
@@ -55,13 +57,14 @@ router.post('/', (req, res) => {
       res.status(201).json(req.body);
     }).catch((err) => {
       res.status(500).send(err);
-    })
+    });
+  } else {
+    models.Log.create(req.body).then((log) => {
+      res.status(201).json(log);
+    }).catch((err) => {
+      res.status(500).send(err);
+    });
   }
-  models.Log.create(req.body).then((log) => {
-    res.status(201).json(log);
-  }).catch((err) => {
-    res.status(500).send(err);
-  })
 });
 
 router.get('/:id', (req, res) => {
@@ -81,7 +84,7 @@ router.put('/:id', (req, res) => {
     res.json(log);
   }).catch((err) => {
     res.status(500).send(err);
-  })
+  });
 });
 
 router.delete('/:id', (req, res) => {
@@ -95,7 +98,7 @@ router.delete('/:id', (req, res) => {
     }
   }).catch((err) => {
     res.status(500).send(err);
-  })
+  });
 });
 
 module.exports = router;

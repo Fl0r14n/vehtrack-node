@@ -12,7 +12,10 @@ const users = require('./routes/users');
 const fleets = require('./routes/fleets');
 const devices = require('./routes/devices');
 const journeys = require('./routes/journeys');
+const positions = require('./routes/positions');
 const logs = require('./routes/logs');
+
+const API_VERSION = '/api/v1';
 
 let app = express();
 
@@ -22,7 +25,7 @@ app.set('view engine', 'jade');
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(require('morgan')({ "stream": logger.stream }));
+app.use(require('morgan')({"stream": logger.stream}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
@@ -35,11 +38,12 @@ app.use('/auth', auth.router);
 
 
 app.use('/', index);
-app.use('/user', users);
-app.use('/fleet', fleets);
-app.use('/device', devices);
-app.use('/journey', journeys);
-app.use('/log', logs);
+app.use(`${API_VERSION}/user`, users);
+app.use(`${API_VERSION}/fleet`, fleets);
+app.use(`${API_VERSION}/device`, devices);
+app.use(`${API_VERSION}/journey`, journeys);
+app.use(`${API_VERSION}/positions`, journeys);
+app.use(`${API_VERSION}/log`, logs);
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
