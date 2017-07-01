@@ -20,6 +20,10 @@
     "database": {
       "dialect": "sqlite",
       "storage": ":memory:"
+    },
+    "jwt": {
+      "secret": "hackme",
+      "expiresIn": 10080
     }
   },
   "production": {

@@ -452,7 +452,7 @@ const yourNavigationOrg = (start, stop) => {
 };
 
 // main
-models.sequelize.sync().then(function () {
+models.sequelize.sync().then(() => {
   generateRoles().then((roles) => {
     if (GENERATE_WITH_FLEETS) {
       generateFleets().then((fleets) => {
