@@ -3,9 +3,6 @@ module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     username: {
       type: DataTypes.STRING(64),
-      validate: {
-        is: /^[\w.@+-]+$/
-      }
     }
   });
   User.tableName = 'users';

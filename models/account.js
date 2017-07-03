@@ -42,18 +42,16 @@ module.exports = (sequelize, DataTypes) => {
   Account._hashPassword = (password) => {
     return bcrypt.hashSync(password, bcrypt.genSaltSync(8), null);
   };
-  Account.beforeCreate = (account, options, done) => {
+  Account.hook('beforeCreate', (account, options) => {
     account.password = Account._hashPassword(account.password);
-    return done(null, account)
-  };
-  Account.beforeUpdate = (account, options, done) => {
+  });
+  Account.hook('beforeUpdate', (account, options) => {
     if (account.password !== account.password) {
       account.password = Account._hashPassword(account.password);
-      return done(null, account)
     }
-  };
-  Account.prototype.authenticate = (password) => {
-    if (bcrypt.compareSync(password, this.password)) {
+  });
+  Account.prototype.authenticate = function (password) {
+    if (this.isActive && bcrypt.compareSync(password, this.password)) {
       this.lastLogin = new Date();
       this.save();
       return true;

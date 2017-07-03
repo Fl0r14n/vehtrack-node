@@ -86,10 +86,9 @@ module.exports = (sequelize, DataTypes) => {
     let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return 6367 * c; //km
   };
-  Journey.beforeSave = (journey, options, done) => {
+  Journey.hook('beforeSave', (journey, options) => {
     journey.duration = Journey._haversine(journey.startLatitude, journey.startLongitude, journey.stopLatitude, journey.stopLongitude);
     journey.duration = journey.stopTimestamp - journey.startTimestamp;
-    return done(null, journey);
-  };
+  });
   return Journey;
 };

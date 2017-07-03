@@ -1,5 +1,5 @@
 const passport = require('passport');
-const passportLocal = require('passport-local');
+const JsonStrategy = require('passport-json').Strategy;
 const jwt = require('jsonwebtoken');
 const ejwt = require('express-jwt');
 const express = require('express');
@@ -9,15 +9,18 @@ const models = require('../models');
 const env = process.env.NODE_ENV || 'development';
 const config = require('../config/config.json')[env]['jwt'];
 
-passport.use(new passportLocal.Strategy(function (email, password, next) {
-  models.Account.findOne({email: email}).then(function (account) {
+passport.use(new JsonStrategy({
+  usernameProp: 'email',
+  passwordProp: 'password'
+}, (email, password, next) => {
+  models.Account.findById(email).then((account) => {
     if (!account) return next(null, false);
     return next(null, account.authenticate(password) ? account : false);
   });
 }));
 
-router.post('/login', function (req, res, next) {
-  passport.authenticate('local', function (err, account, info) {
+router.post('/auth/login', (req, res, next) => {
+  passport.authenticate('json', function (err, account, info) {
     if (err) return next(err);
     if (!account) {
       return res.status(401).json({
@@ -26,7 +29,10 @@ router.post('/login', function (req, res, next) {
       });
     } else {
       return res.json({
-        token: jwt.sign(account, config.secret, {
+        token: jwt.sign({
+          email: account.email,
+          role: account.role
+        }, config.secret, {
           expiresIn: config.expiresIn
         })
       });
@@ -34,7 +40,7 @@ router.post('/login', function (req, res, next) {
   })(req, res, next);
 });
 
-router.post('/register', function (req, res, next) {
+router.post('/auth/register', (req, res, next) => {
   models.Account.findOrCreate({
     where: {
       email: req.body.email
@@ -62,9 +68,14 @@ const addAccountToRequest = (req, res, next) => {
       }
     });
   }
+  if (req.account) {
+    return next();
+  } else {
+    return res.status(401).json({status: 'error', code: 'unauthorized'});
+  }
 };
 
-exports.passport = passport.initialize();
+exports.passport = passport;
 exports.router = router;
-exports.ejwt = ejwt({secret: config.secret, userProperty: 'tokenPayload'}).unless({path: ['/login']});
+exports.ejwt = ejwt({secret: config.secret, userProperty: 'tokenPayload'}).unless({path: ['/auth/login']});
 exports.addAccountToRequest = addAccountToRequest;

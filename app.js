@@ -1,5 +1,4 @@
 const express = require('express');
-var winston = require('winston'); // for transports.Console
 const path = require('path');
 const favicon = require('serve-favicon');
 const logger = require('./logger');
@@ -26,15 +25,15 @@ app.set('view engine', 'jade');
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
 app.use(require('morgan')({"stream": logger.stream}));
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use(auth.passport);
+app.use(auth.passport.initialize());
 app.use(auth.ejwt);
+app.use(auth.router);
 app.use(auth.addAccountToRequest);
-app.use('/auth', auth.router);
 
 
 app.use('/', index);
