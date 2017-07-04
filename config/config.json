@@ -12,8 +12,14 @@
       "syncOnAssociation": true
     },
     "jwt": {
-      "secret": "hackme",
-      "expiresIn": 10080
+      "token": {
+        "secret": "hackme",
+        "expiresIn": 500
+      },
+      "refreshToken": {
+        "secret": "whatever",
+        "expiresIn": 604800
+      }
     }
   },
   "test": {
@@ -22,8 +28,14 @@
       "storage": ":memory:"
     },
     "jwt": {
-      "secret": "hackme",
-      "expiresIn": 10080
+      "token": {
+        "secret": "hackme",
+        "expiresIn": 30
+      },
+      "refreshToken": {
+        "secret": "whatever",
+        "expiresIn": 60
+      }
     }
   },
   "production": {

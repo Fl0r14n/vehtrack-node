@@ -33,8 +33,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(auth.passport.initialize());
 app.use(auth.ejwt);
 app.use(auth.router);
-app.use(auth.addAccountToRequest);
-
 
 app.use('/', index);
 app.use(`${API_VERSION}/user`, users);

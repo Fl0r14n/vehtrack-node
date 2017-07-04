@@ -45,49 +45,70 @@ describe('Auth', function () {
       email: USERNAME,
       password: PASSWORD
     }).end((err, res) => {
-      console.log(res.body);
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.have.property('token');
+      res.body.should.have.property('refreshToken');
       done();
     });
   });
+
+  it('username and password should register', (done) => {
+    chai.request(server).post('/auth/register').send({
+      email: 'new-user@test.com',
+      password: 'hackme'
+    }).end((err, res) => {
+      res.should.redirect;
+      done();
+    });
+  });
+
+  it('existing user when register should return 409', (done) => {
+    chai.request(server).post('/auth/register').send({
+      email: USERNAME,
+      password: PASSWORD
+    }).end((err, res) => {
+      res.should.have.status(409);
+      done();
+    })
+  });
+
 });
 
-describe('Logs', () => {
-  const endpoint = '/log';
-  before((done) => {
-    models.sequelize.sync().then(() => {
-      done()
-    });
-  });
-  it('should list ALL logs on /log GET', (done) => {
-    chai.request(server).get(`${API_ROOT}${endpoint}`).end((err, res) => {
-      res.should.have.status(200);
-      res.should.be.json;
-      done();
-    })
-  });
-  it('should list a SINGLE log on /log/<id> GET', (done) => {
-    done();
-  });
-  it('should add a SINGLE log on /log POST', (done) => {
-    chai.request(server).post(`${API_ROOT}${endpoint}`).send({
-      timestamp: new Date(),
-      level: models.Log.level.DEBUG,
-    }).end((err, res) => {
-      res.should.have.status(201);
-      res.should.be.json;
-      res.body.should.be.a('object');
-      res.body.should.have.property('level');
-      res.body.level.should.equal(models.Log.level.DEBUG);
-      done();
-    })
-  });
-  it('should update a SINGLE log on /log/<id> PUT', (done) => {
-    done();
-  });
-  it('should delete a SINGLE log on /log/<id> DELETE', (done) => {
-    done();
-  });
-});
+// describe('Logs', () => {
+//   const endpoint = '/log';
+//   before((done) => {
+//     models.sequelize.sync().then(() => {
+//       done()
+//     });
+//   });
+//   it('should list ALL logs on /log GET', (done) => {
+//     chai.request(server).get(`${API_ROOT}${endpoint}`).end((err, res) => {
+//       res.should.have.status(200);
+//       res.should.be.json;
+//       done();
+//     })
+//   });
+//   it('should list a SINGLE log on /log/<id> GET', (done) => {
+//     done();
+//   });
+//   it('should add a SINGLE log on /log POST', (done) => {
+//     chai.request(server).post(`${API_ROOT}${endpoint}`).send({
+//       timestamp: new Date(),
+//       level: models.Log.level.DEBUG,
+//     }).end((err, res) => {
+//       res.should.have.status(201);
+//       res.should.be.json;
+//       res.body.should.be.a('object');
+//       res.body.should.have.property('level');
+//       res.body.level.should.equal(models.Log.level.DEBUG);
+//       done();
+//     })
+//   });
+//   it('should update a SINGLE log on /log/<id> PUT', (done) => {
+//     done();
+//   });
+//   it('should delete a SINGLE log on /log/<id> DELETE', (done) => {
+//     done();
+//   });
+// });

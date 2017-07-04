@@ -32,15 +32,58 @@ router.post('/auth/login', (req, res, next) => {
         token: jwt.sign({
           email: account.email,
           role: account.role
-        }, config.secret, {
-          expiresIn: config.expiresIn
+        }, config.token.secret, {
+          expiresIn: config.token.expiresIn
+        }),
+        refreshToken: jwt.sign({
+          email: account.email,
+          role: account.role
+        }, config.refreshToken.secret, {
+          expiresIn: config.refreshToken.expiresIn
         })
       });
     }
   })(req, res, next);
 });
 
-router.post('/auth/register', (req, res, next) => {
+router.post('/auth/refresh', (req, res) => {
+  const token = getToken(req);
+  jwt.verify(token, config.token.secret, (err, decoded) => {
+    console.log(decoded);
+    const owner = decoded.email;
+    const role = decoded.role;
+    if (err) {
+      res.status(500).send(err);
+    } else {
+      const refreshToken = req.body.refreshToken;
+      jwt.verify(refreshToken, config.refreshToken.secret, (err, decoded) => {
+        if (err) {
+          res.status(500).send(err);
+        } else {
+          if (owner === decoded.email) { // same owner so we good
+            return res.json({
+              token: jwt.sign({
+                email: owner,
+                role: role
+              }, config.token.secret, {
+                expiresIn: config.token.expiresIn
+              })
+            })
+          }
+        }
+      });
+    }
+  });
+});
+
+router.post('/auth/logout', (req, res) => {
+  const token = getToken(req);
+  jwt.verify(token, config.token.secret, (err, decoded) => {
+    revokedTokens.push(token);
+  });
+});
+
+router.post('/auth/register', (req, res) => {
   models.Account.findOrCreate({
     where: {
       email: req.body.email
@@ -57,25 +100,26 @@ router.post('/auth/register', (req, res, next) => {
   });
 });
 
-const addAccountToRequest = (req, res, next) => {
-  if (req.tokenPayload) {
-    models.Account.findById(req.tokenPayload.email).then((account) => {
-      if (account) {
-        req.account = account;
-        return next();
-      } else {
-        return res.status(401).json({status: 'error', code: 'unauthorized'});
-      }
-    });
+const getToken = (req) => {
+  if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+    return req.headers.authorization.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    return req.query.token;
   }
-  if (req.account) {
-    return next();
-  } else {
-    return res.status(401).json({status: 'error', code: 'unauthorized'});
-  }
+  return null;
 };
+
+let revokedTokens = []; // TODO a more complex structure that would include timestamp and some logic to clear expired tokens
 
 exports.passport = passport;
 exports.router = router;
-exports.ejwt = ejwt({secret: config.secret, userProperty: 'tokenPayload'}).unless({path: ['/auth/login']});
-exports.addAccountToRequest = addAccountToRequest;
+exports.ejwt = ejwt({
+  secret: config.secret,
+  userProperty: 'token',
+  isRevoked: (req, payload, done) => {
+    const token = getToken(req);
+    return done(null, revokedTokens.token.indexOf(token) > 0);
+  }
+}).unless({
+  path: ['/auth/login', '/auth/register']
+});
