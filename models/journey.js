@@ -87,8 +87,12 @@ module.exports = (sequelize, DataTypes) => {
     return 6367 * c; //km
   };
   Journey.hook('beforeSave', (journey, options) => {
-    journey.duration = Journey._haversine(journey.startLatitude, journey.startLongitude, journey.stopLatitude, journey.stopLongitude);
-    journey.duration = journey.stopTimestamp - journey.startTimestamp;
+    if (journey.startLatitude && journey.startLongitude && journey.stopLatitude && journey.stopLongitude) {
+      journey.distance = Journey._haversine(journey.startLatitude, journey.startLongitude, journey.stopLatitude, journey.stopLongitude);
+    }
+    if (journey.stopTimestamp && journey.startTimestamp) {
+      journey.duration = journey.stopTimestamp - journey.startTimestamp;
+    }
   });
   return Journey;
 };

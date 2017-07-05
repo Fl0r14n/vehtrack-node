@@ -2,18 +2,20 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 
+const attributes = ['startLatitude', 'startLongitude', 'startTimestamp', 'stopLatitude', 'stopLongitude', 'stopTimestamp', 'distance', 'averageSpeed', 'maximumSpeed', 'duration'];
+
 router.get('/', (req, res) => {
-  const limit = req.params.limit;
-  const offset = req.params.offset;
-  const deviceSerial = req.params.device__serial;
-  const startTimestamp = req.params.timestamp__gte;
-  const stopTimestamp = req.params.timestamp__lte;
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+  const deviceId = req.query.device__id;
+  const startTimestamp = req.query.timestamp__gte;
+  const stopTimestamp = req.query.timestamp__lte;
 
   let query = {
     where: {},
-    include: [],
     offset: offset || 0,
-    limit: limit || 50
+    limit: limit || 50,
+    attributes: attributes
   };
   if (startTimestamp) {
     query.where.timestamp = query.where.timestamp || {};
@@ -23,13 +25,14 @@ router.get('/', (req, res) => {
     query.where.timestamp = query.where.timestamp || {};
     query.where.timestamp.$lte = stopTimestamp
   }
-  if (deviceSerial) {
-    query.include.push({
-      model: models.Device,
-      where: {
-        serial: deviceSerial
-      }
-    });
+  if (deviceId) {
+    if (Array.isArray(deviceId)) {
+      query.where.device_id = {
+        $in: deviceId
+      };
+    } else {
+      query.where.device_id = deviceId;
+    }
   }
   models.Journey.findAll(query).then((Journey) => {
     res.json(Journey);
@@ -40,13 +43,17 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   if (Array.isArray(req.body)) {
-    models.Journey.bulkCreate(req.body).then(() => {
+    models.Journey.bulkCreate(req.body, {
+      attributes: attributes
+    }).then(() => {
       res.status(201).json(req.body);
     }).catch((err) => {
       res.status(500).send(err);
     });
   } else {
-    models.Journey.create(req.body).then((journey) => {
+    models.Journey.create(req.body, {
+      attributes: attributes
+    }).then((journey) => {
       res.status(201).json(journey);
     }).catch((err) => {
       res.status(500).send(err);
@@ -55,7 +62,9 @@ router.post('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  models.Journey.findById(req.params.id).then((journey) => {
+  models.Journey.findById(req.params.id, {
+    attributes: attributes
+  }).then((journey) => {
     res.json(journey);
   }).catch((err) => {
     res.status(500).send(err);
@@ -66,9 +75,14 @@ router.put('/:id', (req, res) => {
   models.Journey.update(req.body, {
     where: {
       id: req.params.id
-    }
-  }).then((journey) => {
-    res.json(journey);
+    },
+    attributes: attributes
+  }).then((journeyIds) => {
+    models.Journey.findById(journeyIds[0], {
+      attributes: attributes
+    }).then((journey) => {
+      res.json(journey);
+    });
   }).catch((err) => {
     res.status(500).send(err);
   });
