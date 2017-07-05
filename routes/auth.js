@@ -79,7 +79,14 @@ router.post('/auth/refresh', (req, res) => {
 router.post('/auth/logout', (req, res) => {
   const token = getToken(req);
   jwt.verify(token, config.token.secret, (err, decoded) => {
-    revokedTokens.push(token);
+    if (err) {
+      res.status(500).send(err);
+    }
+    revokedTokens.push({
+      token: token,
+      timestamp: new Date()
+    });
+    res.sendStatus(204);
   });
 });
 
@@ -114,11 +121,27 @@ let revokedTokens = []; // TODO a more complex structure that would include time
 exports.passport = passport;
 exports.router = router;
 exports.ejwt = ejwt({
-  secret: config.secret,
+  secret: config.token.secret,
   userProperty: 'token',
   isRevoked: (req, payload, done) => {
+    if (revokedTokens.length === 0) {
+      return done(null, false);
+    }
     const token = getToken(req);
-    return done(null, revokedTokens.token.indexOf(token) > 0);
+    const now = new Date();
+    let isFound = false;
+    for (let i = 0; i < revokedTokens; i++) {
+      // remove expired tokens
+      if (now - revokedTokens[i].timestamp > (config.token.expiresIn * 1000)) {
+        revokedTokens.splice(i, 1);
+      }
+      // is token found
+      if (revokedTokens[i].token === token) {
+        isFound = true;
+        return;
+      }
+    }
+    return done(null, isFound);
   }
 }).unless({
   path: ['/auth/login', '/auth/register']
