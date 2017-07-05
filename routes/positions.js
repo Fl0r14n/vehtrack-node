@@ -2,19 +2,21 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 
+const attributes = ['latitude', 'longitude', 'timestamp', 'speed', 'journey_id', 'device_id'];
+
 router.get('/', (req, res) => {
   const limit = req.params.limit;
   const offset = req.params.offset;
-  const deviceSerial = req.params.device__serial;
+  const deviceId = req.params.device__id;
   const journeyId = req.params.journey__id;
   const startTimestamp = req.params.timestamp__gte;
   const stopTimestamp = req.params.timestamp__lte;
 
   let query = {
     where: {},
-    include: [],
     offset: offset || 0,
-    limit: limit || 50
+    limit: limit || 50,
+    attributes: attributes
   };
   if (startTimestamp) {
     query.where.timestamp = query.where.timestamp || {};
@@ -24,21 +26,23 @@ router.get('/', (req, res) => {
     query.where.timestamp = query.where.timestamp || {};
     query.where.timestamp.$lte = stopTimestamp
   }
-  if (deviceSerial) {
-    query.include.push({
-      model: models.Device,
-      where: {
-        serial: deviceSerial
-      }
-    });
+  if (deviceId) {
+    if (Array.isArray(deviceId)) {
+      query.where.device_id = {
+        $in: deviceId
+      };
+    } else {
+      query.where.device_id = deviceId;
+    }
   }
   if (journeyId) {
-    query.include.push({
-      model: models.Journey,
-      where: {
-        id: journeyId
-      }
-    })
+    if (Array.isArray(journeyId)) {
+      query.where.journey_id = {
+        $in: journeyId
+      };
+    } else {
+      query.where.journey_id = journeyId;
+    }
   }
   models.Position.findAll(query).then((positions) => {
     res.json(positions);
@@ -49,13 +53,17 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   if (Array.isArray(req.body)) {
-    models.Position.bulkCreate(req.body).then(() => {
+    models.Position.bulkCreate(req.body, {
+      attributes: attributes
+    }).then(() => {
       res.status(201).json(req.body);
     }).catch((err) => {
       res.status(500).send(err);
     });
   } else {
-    models.Position.create(req.body).then((position) => {
+    models.Position.create(req.body, {
+      attributes: attributes
+    }).then((position) => {
       res.status(201).json(position);
     }).catch((err) => {
       res.status(500).send(err);
@@ -64,7 +72,9 @@ router.post('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  models.Position.findById(req.params.id).then((position) => {
+  models.Position.findById(req.params.id, {
+    attributes: attributes
+  }).then((position) => {
     res.json(position);
   }).catch((err) => {
     res.status(500).send(err);
@@ -76,8 +86,12 @@ router.put('/:id', (req, res) => {
     where: {
       id: req.params.id
     }
-  }).then((position) => {
-    res.json(position);
+  }).then((positionIds) => {
+    models.Position.findById(positionIds[0], {
+      attributes: attributes
+    }).then((position) => {
+      res.json(position);
+    });
   }).catch((err) => {
     res.status(500).send(err);
   });

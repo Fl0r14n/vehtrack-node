@@ -11,7 +11,7 @@ router.get('/', (req, res) => {
   const journeyId = req.query.journey__id;
   const startTimestamp = req.query.timestamp__gte;
   const stopTimestamp = req.query.timestamp__lte;
-  const level = req.params.level;
+  const level = req.query.level;
 
   let query = {
     where: {},

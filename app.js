@@ -39,7 +39,7 @@ app.use(`${API_VERSION}/user`, users);
 app.use(`${API_VERSION}/fleet`, fleets);
 app.use(`${API_VERSION}/device`, devices);
 app.use(`${API_VERSION}/journey`, journeys);
-app.use(`${API_VERSION}/positions`, journeys);
+app.use(`${API_VERSION}/position`, positions);
 app.use(`${API_VERSION}/log`, logs);
 
 // catch 404 and forward to error handler
