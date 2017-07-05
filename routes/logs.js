@@ -2,20 +2,22 @@ const express = require('express');
 const router = express.Router();
 const models = require('../models');
 
+const attributes = ['id', 'timestamp', 'level', 'message', 'journey_id', 'device_id'];
+
 router.get('/', (req, res) => {
-  const limit = req.params.limit;
-  const offset = req.params.offset;
-  const deviceSerial = req.params.device__serial;
-  const journeyId = req.params.journey__id;
-  const startTimestamp = req.params.timestamp__gte;
-  const stopTimestamp = req.params.timestamp__lte;
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+  const deviceId = req.query.device__id;
+  const journeyId = req.query.journey__id;
+  const startTimestamp = req.query.timestamp__gte;
+  const stopTimestamp = req.query.timestamp__lte;
   const level = req.params.level;
 
   let query = {
     where: {},
-    include: [],
     offset: offset || 0,
-    limit: limit || 50
+    limit: limit || 50,
+    attributes: attributes
   };
   if (level) {
     query.where.level = level
@@ -28,21 +30,23 @@ router.get('/', (req, res) => {
     query.where.timestamp = query.where.timestamp || {};
     query.where.timestamp.$lte = stopTimestamp
   }
-  if (deviceSerial) {
-    query.include.push({
-      model: models.Device,
-      where: {
-        serial: deviceSerial
-      }
-    });
+  if (deviceId) {
+    if (Array.isArray(deviceId)) {
+      query.where.device_id = {
+        $in: deviceId
+      };
+    } else {
+      query.where.device_id = deviceId;
+    }
   }
   if (journeyId) {
-    query.include.push({
-      model: models.Journey,
-      where: {
-        id: journeyId
-      }
-    });
+    if (Array.isArray(journeyId)) {
+      query.where.journey_id = {
+        $in: journeyId
+      };
+    } else {
+      query.where.journey_id = journeyId;
+    }
   }
   models.Log.findAll(query).then((logs) => {
     res.json(logs);
@@ -53,13 +57,17 @@ router.get('/', (req, res) => {
 
 router.post('/', (req, res) => {
   if (Array.isArray(req.body)) {
-    models.Log.bulkCreate(req.body).then(() => {
+    models.Log.bulkCreate(req.body, {
+      attributes: attributes
+    }).then(() => {
       res.status(201).json(req.body);
     }).catch((err) => {
       res.status(500).send(err);
     });
   } else {
-    models.Log.create(req.body).then((log) => {
+    models.Log.create(req.body, {
+      attributes: attributes
+    }).then((log) => {
       res.status(201).json(log);
     }).catch((err) => {
       res.status(500).send(err);
@@ -68,7 +76,9 @@ router.post('/', (req, res) => {
 });
 
 router.get('/:id', (req, res) => {
-  models.Log.findById(req.params.id).then((log) => {
+  models.Log.findById(req.params.id, {
+    attributes: attributes
+  }).then((log) => {
     res.json(log);
   }).catch((err) => {
     res.status(500).send(err);
@@ -79,9 +89,14 @@ router.put('/:id', (req, res) => {
   models.Log.update(req.body, {
     where: {
       id: req.params.id
-    }
-  }).then((log) => {
-    res.json(log);
+    },
+    attributes: attributes
+  }).then((logIds) => {
+    models.Log.findById(logIds[0], {
+      attributes: attributes
+    }).then((log) => {
+      res.json(log);
+    });
   }).catch((err) => {
     res.status(500).send(err);
   });

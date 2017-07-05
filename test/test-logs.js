@@ -13,8 +13,8 @@ chai.use(chaiHttp);
 const USERNAME = 'test@test.com';
 const PASSWORD = 'hackme';
 const DEVICE = 'device@test.com';
-const START_DATE = new Date();
-const STOP_DATE = new Date(START_DATE - 604800000);
+const STOP_DATE = new Date();
+const START_DATE = new Date(STOP_DATE - 604800000);
 
 const createUser = async () => {
   let role = await models.AccountRole.create({
@@ -43,7 +43,6 @@ const createSampleData = async () => {
     description: 'Device'
   });
   let device = await models.Device.create({
-    serial: 'serial_test',
     type: 'test',
     description: 'test device',
     account: {
@@ -75,9 +74,7 @@ const login = async () => {
 
 const init = async () => {
   await models.sequelize.sync();
-  console.log('1===============================');
   const sampleData = await createSampleData();
-  console.log('2===============================');
   const token = await login();
   return {
     sampleData: sampleData,
@@ -96,38 +93,91 @@ describe('Logs', () => {
     });
   });
 
-  it('should list ALL logs on /log GET', (done) => {
+  it('should READ ALL logs on /log GET', (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
-      console.log(res.body);
+      res.body.should.be.a('array');
       done();
-    })
+    });
   });
 
-  // it('should list a SINGLE log on /log/:id GET', (done) => {
-  //   done();
-  // });
-  //
-  // it('should add a SINGLE log on /log POST', (done) => {
-  //   chai.request(server).post(`${API_ROOT}${endpoint}`).send({
-  //     timestamp: new Date(),
-  //     level: models.Log.level.DEBUG,
-  //   }).end((err, res) => {
-  //     res.should.have.status(201);
-  //     res.should.be.json;
-  //     res.body.should.be.a('object');
-  //     res.body.should.have.property('level');
-  //     res.body.level.should.equal(models.Log.level.DEBUG);
-  //     done();
-  //   })
-  // });
-  //
-  // it('should update a SINGLE log on /log/<id> PUT', (done) => {
-  //   done();
-  // });
-  //
-  // it('should delete a SINGLE log on /log/<id> DELETE', (done) => {
-  //   done();
-  // });
+  it('should READ by query logs on /log GET', (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).query({
+      offset: 1,
+      limit: 3,
+      device__id: [initObj.sampleData.device.id, 2, 3, 4],
+      journey__id: initObj.sampleData.journeys[0].id,
+      timestamp__gte: START_DATE,
+      timestamp__lte: STOP_DATE
+    }).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    });
+  });
+
+  it('should CREATE a SINGLE log on /log POST', (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send({
+      timestamp: new Date(),
+      level: models.Log.LEVEL.DEBUG,
+      device_id: initObj.sampleData.device.id
+    }).end((err, res) => {
+      res.should.have.status(201);
+      res.should.be.json;
+      res.body.should.be.a('object');
+      res.body.should.have.property('level');
+      res.body.level.should.equal(models.Log.LEVEL.DEBUG);
+      done();
+    });
+  });
+
+  it('should CREATE MULTIPLE log on /log POST', (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send([{
+      timestamp: new Date(),
+      level: models.Log.LEVEL.DEBUG,
+      device_id: initObj.sampleData.device.id
+    }, {
+      timestamp: new Date(),
+      level: models.Log.LEVEL.WARN,
+      device_id: initObj.sampleData.device.id
+    }]).end((err, res) => {
+      res.should.have.status(201);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    });
+  });
+
+  it('should READ a SINGLE log on /log/:id GET', (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('object');
+      res.body.should.have.property('level');
+      done();
+    });
+  });
+
+  it('should UPDATE SINGLE log on /log/:id PUT', (done) => {
+    const expected = 'test message';
+    chai.request(server).put(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).send({
+      message: expected
+    }).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('object');
+      res.body.should.have.property('message');
+      res.body.message.should.equal(expected);
+      done();
+    });
+  });
+
+  it('should DELETE SINGLE log on /log/:id DELETE', (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(204);
+      done();
+    });
+  });
 });

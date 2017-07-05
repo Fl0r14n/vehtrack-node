@@ -153,7 +153,6 @@ const generateDevicesForFleets = async (fleets) => {
   for (let fleet of fleets) {
     L.debug(`Fleet: ${fleet.name}`);
     let deviceId = await models.Device.count();
-    const serial = `serial_${deviceId}`;
     const type = `mk_${deviceId % 3}`;
     const description = 'This is a mock device';
     const email = `device_${deviceId}${DOMAIN}`;
@@ -161,7 +160,6 @@ const generateDevicesForFleets = async (fleets) => {
     let device;
     try {
       device = await models.Device.create({
-        serial: serial,
         type: type,
         description: description,
         account: {
@@ -238,7 +236,6 @@ const generateDevices = async () => {
   let devices = [];
   let role = await models.AccountRole.findById('DEVICE');
   for (let i = 0; i < TOTAL_DEVICES; i++) {
-    const serial = `serial_${i}`;
     const type = `mk_${i % 3}`;
     const description = 'This is a mock device';
     const email = `device_${i}${DOMAIN}`;

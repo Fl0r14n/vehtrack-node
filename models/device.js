@@ -2,8 +2,9 @@
 module.exports = (sequelize, DataTypes) => {
   const Device = sequelize.define('Device', {
     serial: {
-      type: DataTypes.STRING(30),
-      unique: true
+      type: DataTypes.UUID,
+      unique: true,
+      defaultValue: DataTypes.UUIDV4
     },
     type: {
       type:DataTypes.STRING(30),

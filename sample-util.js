@@ -130,7 +130,7 @@ const generatePointsForJourney = (device, journey, kml, startPoint, startDate, t
 
 const generateLogsForJourney = (device, journey) => {
   let logs = [];
-  for (let i = 0; i < randint(0, MAX_LOGS_JOURNEY); i++) {
+  for (let i = 0; i < randint(1, MAX_LOGS_JOURNEY); i++) {
     const level = levels[randint(0, levels.length - 1)];
     const message = `Message: ${models.Log.LEVEL[level]}`;
     const timestamp = journey.startTimestamp;
