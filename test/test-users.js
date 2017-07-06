@@ -9,9 +9,8 @@ const models = require('../models');
 const API_ROOT = '/api/v1';
 chai.use(chaiHttp);
 
-const USERNAME = 'test@test.com';
+const USERNAME = 'user@test.com';
 const PASSWORD = 'hackme';
-const DEVICE = 'device@test.com';
 
 const createUser = async () => {
   let role = await models.AccountRole.create({
@@ -33,36 +32,6 @@ const createUser = async () => {
   });
 };
 
-const createSampleData = async () => {
-  let user = await createUser();
-  let role = await models.AccountRole.create({
-    name: 'DEVICE',
-    description: 'Device'
-  });
-  let devices = [];
-  for (let i = 0; i < 3; i++) {
-    let device = await models.Device.create({
-      type: 'test',
-      description: `test device ${i}`,
-      account: {
-        email: `device_${i}@test.com`,
-        password: PASSWORD,
-        role_id: role.name
-      }
-    }, {
-      include: [{
-        model: models.Account,
-        as: 'account',
-      }]
-    });
-    devices.push(device);
-  }
-  return {
-    user: user,
-    devices: devices,
-  }
-};
-
 const login = async () => {
   const res = await chai.request(server).post(`/auth/login`).send({
     email: USERNAME,
@@ -73,16 +42,16 @@ const login = async () => {
 
 const init = async () => {
   await models.sequelize.sync();
-  const sampleData = await createSampleData();
+  const user = await createUser();
   const token = await login();
   return {
-    sampleData: sampleData,
+    user: user,
     token: token
   }
 };
 
-describe('Devices', () => {
-  const endpoint = '/device';
+describe('Users', () => {
+  const endpoint = '/user';
   let initObj;
 
   before((done) => {
@@ -114,39 +83,38 @@ describe('Devices', () => {
   });
 
   it(`should CREATE SINGLE on ${endpoint} POST`, (done) => {
-    const expected = 'mock test device';
+    const expected = 'Mock User';
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send({
-      type: 'test',
-      description: expected,
+      username: expected,
       account: {
-        email: 'mockdevice@test.com',
+        email: 'mockuser@test.com',
         password: PASSWORD,
-        role_id: 'DEVICE'
+        role_id: 'USER'
       }
     }).end((err, res) => {
       res.should.have.status(201);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('description');
-      res.body.description.should.equal(expected);
+      res.body.should.have.property('username');
+      res.body.username.should.equal(expected);
       done();
     });
   });
 
   it(`should CREATE MULTIPLE on ${endpoint} POST`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send([{
-      type: 'test',
+      username: 'Mock1',
       account: {
-        email: 'mock1device@test.com',
+        email: 'mock1user@test.com',
         password: PASSWORD,
-        role_id: 'DEVICE'
+        role_id: 'USER'
       }
     }, {
-      type: 'test',
+      username: 'Mock2',
       account: {
-        email: 'mock2device@test.com',
+        email: 'mock2user@test.com',
         password: PASSWORD,
-        role_id: 'DEVICE'
+        role_id: 'USER'
       }
     }]).end((err, res) => {
       res.should.have.status(201);
@@ -157,19 +125,19 @@ describe('Devices', () => {
   });
 
   it(`should READ a SINGLE on ${endpoint}/:email GET`, (done) => {
-    chai.request(server).get(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('description');
+      res.body.should.have.property('username');
       done();
     });
   });
 
   it(`should UPDATE SINGLE on ${endpoint}/:email PUT`, (done) => {
-    const expected = 'test description';
-    chai.request(server).put(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).send({
-      description: expected,
+    const expected = 'test username';
+    chai.request(server).put(`${API_ROOT}${endpoint}/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).send({
+      username: expected,
       account: {
         password: 'hackmenow'
       }
@@ -177,21 +145,21 @@ describe('Devices', () => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('description');
-      res.body.description.should.equal(expected);
+      res.body.should.have.property('username');
+      res.body.username.should.equal(expected);
       done();
     });
   });
 
   it(`should DELETE SINGLE on ${endpoint}/:email DELETE`, (done) => {
-    chai.request(server).delete(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(204);
       done();
     });
   });
 
   it(`after deletion not found SINGLE on ${endpoint}/:email GET`, (done) => {
-    chai.request(server).get(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       should.not.exist(res.body);
       done();

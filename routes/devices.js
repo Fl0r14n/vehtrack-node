@@ -78,7 +78,7 @@ router.get('/:email', (req, res) => {
       where: {
         email: req.params.email
       },
-      attributes: accountAttributesCreate
+      attributes: accountAttributes
     }],
     attributes: attributes
   }).then((device) => {
