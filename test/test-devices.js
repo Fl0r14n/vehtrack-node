@@ -5,7 +5,6 @@ const chaiHttp = require('chai-http');
 const should = chai.should();
 const server = require('../app');
 const models = require('../models');
-const sampleUtil = require('../sample-util');
 
 const API_ROOT = '/api/v1';
 chai.use(chaiHttp);
@@ -42,25 +41,27 @@ const createSampleData = async () => {
     name: 'DEVICE',
     description: 'Device'
   });
-  let device = await models.Device.create({
-    type: 'test',
-    description: 'test device',
-    account: {
-      email: DEVICE,
-      password: PASSWORD,
-      role_id: role.name
-    }
-  }, {
-    include: [{
-      model: models.Account,
-      as: 'account'
-    }]
-  });
-  let journeys = await sampleUtil.generateJourneysForDevice(device, START_DATE, STOP_DATE);
+  let devices = [];
+  for (let i = 0; i < 3; i++) {
+    let device = await models.Device.create({
+      type: 'test',
+      description: `test device ${i}`,
+      account: {
+        email: `device_${i}@test.com`,
+        password: PASSWORD,
+        role_id: role.name
+      }
+    }, {
+      include: [{
+        model: models.Account,
+        as: 'account',
+      }]
+    });
+    devices.push(device);
+  }
   return {
     user: user,
-    device: device,
-    journeys: journeys
+    devices: devices,
   }
 };
 
@@ -82,8 +83,8 @@ const init = async () => {
   }
 };
 
-describe('Journeys', () => {
-  const endpoint = '/journey';
+describe('Devices', () => {
+  const endpoint = '/device';
   let initObj;
 
   before((done) => {
@@ -106,7 +107,6 @@ describe('Journeys', () => {
     chai.request(server).get(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).query({
       offset: 1,
       limit: 3,
-      device__id: [initObj.sampleData.device.id, 2, 3, 4]
     }).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
@@ -116,48 +116,40 @@ describe('Journeys', () => {
   });
 
   it(`should CREATE SINGLE on ${endpoint} POST`, (done) => {
-    const expected = 20;
+    const expected = 'mock test device';
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send({
-      timestamp: new Date(),
-      device_id: initObj.sampleData.device.id,
-      startLatitude: 25.01,
-      stopLatitude: 25.05,
-      startLongitude: 45.01,
-      stopLongitude: 45.03,
-      startTimestamp: new Date(new Date() - 108000),
-      stopTimestamp: new Date(),
-      averageSpeed: expected
+      type: 'test',
+      description: expected,
+      account: {
+        email: 'mockdevice@test.com',
+        password: PASSWORD,
+        role_id: 'DEVICE'
+      }
     }).end((err, res) => {
       res.should.have.status(201);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('averageSpeed');
-      res.body.averageSpeed.should.equal(expected);
+      res.body.should.have.property('description');
+      res.body.description.should.equal(expected);
       done();
     });
   });
 
   it(`should CREATE MULTIPLE on ${endpoint} POST`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send([{
-      timestamp: new Date(),
-      device_id: initObj.sampleData.device.id,
-      startLatitude: 25.01,
-      stopLatitude: 25.05,
-      startLongitude: 45.01,
-      stopLongitude: 45.03,
-      startTimestamp: new Date(new Date() - 108000),
-      stopTimestamp: new Date(),
-      averageSpeed: 20
+      type: 'test',
+      account: {
+        email: 'mock1device@test.com',
+        password: PASSWORD,
+        role_id: 'DEVICE'
+      }
     }, {
-      timestamp: new Date(),
-      device_id: initObj.sampleData.device.id,
-      startLatitude: 25.01,
-      stopLatitude: 25.05,
-      startLongitude: 45.01,
-      stopLongitude: 45.03,
-      startTimestamp: new Date(new Date() - 108000),
-      stopTimestamp: new Date(),
-      averageSpeed: 30
+      type: 'test',
+      account: {
+        email: 'mock2device@test.com',
+        password: PASSWORD,
+        role_id: 'DEVICE'
+      }
     }]).end((err, res) => {
       res.should.have.status(201);
       res.should.be.json;
@@ -166,33 +158,44 @@ describe('Journeys', () => {
     });
   });
 
-  it(`should READ a SINGLE on ${endpoint}/:id GET`, (done) => {
-    chai.request(server).get(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+  it(`should READ a SINGLE on ${endpoint}/:email GET`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('averageSpeed');
+      res.body.should.have.property('description');
       done();
     });
   });
 
-  it(`should UPDATE SINGLE on ${endpoint}/:id PUT`, (done) => {
-    const expected = 50;
-    chai.request(server).put(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).send({
-      averageSpeed: 50
+  it(`should UPDATE SINGLE on ${endpoint}/:email PUT`, (done) => {
+    const expected = 'test description';
+    chai.request(server).put(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).send({
+      description: expected,
+      account: {
+        password: 'hackmenow'
+      }
     }).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('object');
-      res.body.should.have.property('averageSpeed');
-      res.body.averageSpeed.should.equal(expected);
+      res.body.should.have.property('description');
+      res.body.description.should.equal(expected);
       done();
     });
   });
 
-  it(`should DELETE SINGLE on ${endpoint}/:id DELETE`, (done) => {
-    chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+  it(`should DELETE SINGLE on ${endpoint}/:email DELETE`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(204);
+      done();
+    });
+  });
+
+  it(`after deletion not found SINGLE on ${endpoint}/:email GET`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/device_1@test.com`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(200);
+      should.not.exist(res.body);
       done();
     });
   });

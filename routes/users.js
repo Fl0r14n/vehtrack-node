@@ -3,9 +3,9 @@ const router = express.Router();
 const models = require('../models');
 
 router.get('/', (req, res) => {
-  const limit = req.params.limit;
-  const offset = req.params.offset;
-  const fleetIds = req.params.fleets_id;
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+  const fleetIds = req.query.fleets__id;
 
   let query = {
     where: {},

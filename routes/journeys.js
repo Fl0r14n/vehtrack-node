@@ -72,13 +72,14 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
+  const id = req.params.id;
   models.Journey.update(req.body, {
     where: {
-      id: req.params.id
+      id: id
     },
     attributes: attributes
-  }).then((journeyIds) => {
-    models.Journey.findById(journeyIds[0], {
+  }).then(() => {
+    models.Journey.findById(id, {
       attributes: attributes
     }).then((journey) => {
       res.json(journey);

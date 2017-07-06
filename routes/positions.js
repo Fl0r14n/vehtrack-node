@@ -82,12 +82,13 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
+  const id = req.params.id;
   models.Position.update(req.body, {
     where: {
-      id: req.params.id
+      id: id
     }
-  }).then((positionIds) => {
-    models.Position.findById(positionIds[0], {
+  }).then(() => {
+    models.Position.findById(id, {
       attributes: attributes
     }).then((position) => {
       res.json(position);

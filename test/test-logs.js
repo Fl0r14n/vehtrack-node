@@ -93,7 +93,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should READ ALL logs on /log GET', (done) => {
+  it(`should READ ALL on ${endpoint} GET`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
@@ -102,7 +102,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should READ by query logs on /log GET', (done) => {
+  it(`should READ by QUERY on ${endpoint} GET`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).query({
       offset: 1,
       limit: 3,
@@ -118,7 +118,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should CREATE a SINGLE log on /log POST', (done) => {
+  it(`should CREATE SINGLE on ${endpoint} POST`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send({
       timestamp: new Date(),
       level: models.Log.LEVEL.DEBUG,
@@ -133,7 +133,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should CREATE MULTIPLE log on /log POST', (done) => {
+  it(`should CREATE MULTIPLE on ${endpoint} POST`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.token}`).send([{
       timestamp: new Date(),
       level: models.Log.LEVEL.DEBUG,
@@ -150,7 +150,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should READ a SINGLE log on /log/:id GET', (done) => {
+  it(`should READ a SINGLE on ${endpoint}/:id GET`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
@@ -160,7 +160,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should UPDATE SINGLE log on /log/:id PUT', (done) => {
+  it(`should UPDATE SINGLE on ${endpoint}/:id PUT`, (done) => {
     const expected = 'test message';
     chai.request(server).put(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).send({
       message: expected
@@ -174,7 +174,7 @@ describe('Logs', () => {
     });
   });
 
-  it('should DELETE SINGLE log on /log/:id DELETE', (done) => {
+  it(`should DELETE SINGLE on ${endpoint}/:id DELETE`, (done) => {
     chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(204);
       done();

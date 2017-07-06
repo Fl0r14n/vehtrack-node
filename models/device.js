@@ -93,8 +93,8 @@ module.exports = (sequelize, DataTypes) => {
     Device.belongsToMany(models.Fleet, {
       as: 'fleets',
       through: 'devices_fleets',
-      foreignKey: 'device_id',
-      otherKey: 'fleet_id'
+      foreignKey: 'fleet_id',
+      otherKey: 'device_id'
     })
   };
   Device.luhnChecksum = (value) => {

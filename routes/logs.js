@@ -86,13 +86,14 @@ router.get('/:id', (req, res) => {
 });
 
 router.put('/:id', (req, res) => {
+  const id = req.params.id;
   models.Log.update(req.body, {
     where: {
-      id: req.params.id
+      id: id
     },
     attributes: attributes
-  }).then((logIds) => {
-    models.Log.findById(logIds[0], {
+  }).then(() => {
+    models.Log.findById(id, {
       attributes: attributes
     }).then((log) => {
       res.json(log);

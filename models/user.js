@@ -18,8 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsToMany(models.Fleet, {
       as: 'Fleets',
       through: 'users_fleets',
-      foreignKey: 'user_id',
-      otherKey: 'fleet_id'
+      foreignKey: 'fleet_id',
+      otherKey: 'user_id'
     })
   };
   User.getFleetUsers = (fleetName) => {
