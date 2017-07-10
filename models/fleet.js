@@ -4,14 +4,17 @@ module.exports = (sequelize, DataTypes) => {
     name: {
       type: DataTypes.STRING(64),
     },
-    parentId: {
-      type: DataTypes.INTEGER,
-      hierarchy: true,
-      field: 'parent_id'
-    }
   });
   Fleet.tableName = 'fleets';
   Fleet.associate = (models) => {
+    Fleet.belongsTo(models.Fleet, {
+      as: 'parent',
+      onDelete: 'CASCADE',
+      foreignKey: {
+        name: 'parent_id',
+        allowNull: true
+      }
+    });
     Fleet.belongsToMany(models.User, {
       as: 'users',
       through: 'users_fleets',

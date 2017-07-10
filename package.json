@@ -21,7 +21,6 @@
     "passport-json": "^1.2.0",
     "sequelize": "^4.1.0",
     "sequelize-cli": "^2.7.0",
-    "sequelize-hierarchy": "^1.2.0",
     "serve-favicon": "~2.4.2",
     "sqlite3": "^3.1.8",
     "winston": "^2.3.1",
