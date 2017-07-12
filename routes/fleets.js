@@ -3,6 +3,9 @@ const router = express.Router();
 const models = require('../models');
 
 const attributes = ['name', 'parent_id'];
+const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
+const userAttributes = ['username'];
+const deviceAttributes = ['serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
 
 router.get('/', (req, res) => {
   const limit = req.query.limit;
@@ -97,24 +100,202 @@ router.delete('/:id', (req, res) => {
   });
 });
 
+router.get('/:id/user', (req,res) => {
+  const id = req.params.id;
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+
+  let query = {
+    include: [{
+      model: models.Account,
+      as: 'account',
+      attributes: accountAttributes
+    }],
+    attributes: userAttributes,
+    offset: offset || 0,
+    limit: limit || 50,
+  };
+
+  models.Fleet.findById(id).then((fleet) => {
+    if(fleet) {
+      fleet.getUsers(query).then((users) => {
+        res.json(users);
+      }).catch((err) => {
+        res.status(500).send(err);
+      })
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
+});
+
 router.post('/:id/user/:email', (req, res) => {
-  // TODO add user to fleet
-  res.sendStatus(404);
+  const id = req.params.id;
+  const email = req.params.email;
+  models.Fleet.findById(id).then((fleet) => {
+    if (fleet) {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+        }],
+      }).then((user) => {
+        if (user) {
+          fleet.addUser(user).then(() => {
+            res.sendStatus(201);
+          }).catch((err) => {
+            res.status(500).send(err);
+          });
+        } else {
+          res.status(400).send(`User with email: ${email} not found`);
+        }
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
 });
 
 router.delete('/:id/user/:email', (req, res) => {
-  // TODO remove user from fleet
-  res.sendStatus(404);
+  const id = req.params.id;
+  const email = req.params.email;
+  models.Fleet.findById(id).then((fleet) => {
+    if (fleet) {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+        }],
+      }).then((user) => {
+        if (user) {
+          fleet.removeUser(user).then(() => {
+            res.sendStatus(201);
+          }).catch((err) => {
+            res.status(500).send(err);
+          });
+        } else {
+          res.status(400).send(`User with email: ${email} not found`);
+        }
+      }).catch((err) => {
+        res.status(500).send(err);
+      })
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
 });
 
-router.get('/:id/device/:email', (req, res) => {
-  // TODO add device to fleet
-  res.sendStatus(404);
+router.get('/:id/device', (req,res) => {
+  const id = req.params.id;
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+
+  let query = {
+    include: [{
+      model: models.Account,
+      as: 'account',
+      attributes: accountAttributes
+    }],
+    attributes: deviceAttributes,
+    offset: offset || 0,
+    limit: limit || 50,
+  };
+
+  models.Fleet.findById(id).then((fleet) => {
+    if(fleet) {
+      fleet.getDevices(query).then((devices) => {
+        res.json(devices);
+      }).catch((err) => {
+        res.status(500).send(err);
+      })
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
 });
 
-router.get('/:id/device/:email', (req, res) => {
-  // TODO remove device from fleet
-  res.sendStatus(404);
+router.post('/:id/device/:email', (req, res) => {
+  const id = req.params.id;
+  const email = req.params.email;
+  models.Fleet.findById(id).then((fleet) => {
+    if (fleet) {
+      models.Device.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+        }],
+      }).then((device) => {
+        if (device) {
+          fleet.addDevice(device).then(() => {
+            res.sendStatus(201);
+          }).catch((err) => {
+            res.status(500).send(err);
+          });
+        } else {
+          res.status(400).send(`Device with email: ${email} not found`);
+        }
+      }).catch((err) => {
+        res.status(500).send(err);
+      })
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
+});
+
+router.delete('/:id/device/:email', (req, res) => {
+  const id = req.params.id;
+  const email = req.params.email;
+  models.Fleet.findById(id).then((fleet) => {
+    if (fleet) {
+      models.Device.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+        }],
+      }).then((device) => {
+        if (device) {
+          fleet.removeDevice(device).then(() => {
+            res.sendStatus(201);
+          }).catch((err) => {
+            res.status(500).send(err);
+          });
+        } else {
+          res.status(400).send(`Device with email: ${email} not found`);
+        }
+      }).catch((err) => {
+        res.status(500).send(err);
+      })
+    } else {
+      res.status(400).send(`Fleet with id: ${id} not found`);
+    }
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
 });
 
 module.exports = router;

@@ -11,6 +11,7 @@ chai.use(chaiHttp);
 
 const USERNAME = 'test@test.com';
 const PASSWORD = 'hackme';
+const DEVICE = 'device@test.com';
 
 const createUser = async () => {
   let role = await models.AccountRole.create({
@@ -21,6 +22,27 @@ const createUser = async () => {
     username: 'Test User',
     account: {
       email: USERNAME,
+      password: PASSWORD,
+      role_id: role.name
+    }
+  }, {
+    include: [{
+      model: models.Account,
+      as: 'account'
+    }]
+  });
+};
+
+const createDevice = async () => {
+  let role = await models.AccountRole.create({
+    name: 'DEVICE',
+    description: 'Device'
+  });
+  return await models.Device.create({
+    type: 'test',
+    description: 'test device',
+    account: {
+      email: DEVICE,
       password: PASSWORD,
       role_id: role.name
     }
@@ -44,9 +66,11 @@ const init = async () => {
   await models.sequelize.sync();
   const user = await createUser();
   const token = await login();
+  const device = await createDevice();
   return {
     user: user,
-    token: token
+    token: token,
+    device: device
   }
 };
 
@@ -133,6 +157,52 @@ describe('Fleets', () => {
     });
   });
 
+  it(`should ASSIGN user to fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/1/user/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`should READ ALL users assigned to fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/1/user/`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    })
+  });
+
+  it(`should REMOVE user from fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1/user/${USERNAME}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`should ASSIGN device to fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/1/device/${DEVICE}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`should READ ALL devices assigned to fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/1/device/`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    })
+  });
+
+  it(`should REMOVE device from fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1/device/${DEVICE}`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
   it(`should DELETE SINGLE on ${endpoint}/:id DELETE`, (done) => {
     chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(204);
@@ -140,7 +210,7 @@ describe('Fleets', () => {
     });
   });
 
-  it(`after deletion not found SINGLE on ${endpoint}/:email GET`, (done) => {
+  it(`after deletion not found SINGLE on ${endpoint}/:id GET`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.token}`).end((err, res) => {
       res.should.have.status(200);
       should.not.exist(res.body);
@@ -176,6 +246,6 @@ describe('Fleets', () => {
         done();
       });
     });
-  })
+  });
 });
 
