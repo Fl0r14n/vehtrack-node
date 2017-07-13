@@ -31,7 +31,7 @@ router.post('/auth/login', (req, res, next) => {
       return res.json({
         token: jwt.sign({
           email: account.email,
-          role: account.role
+          role: account.role_id
         }, config.token.secret, {
           expiresIn: config.token.expiresIn
         }),
@@ -49,7 +49,6 @@ router.post('/auth/login', (req, res, next) => {
 router.post('/auth/refresh', (req, res) => {
   const token = getToken(req);
   jwt.verify(token, config.token.secret, (err, decoded) => {
-    console.log(decoded);
     const owner = decoded.email;
     const role = decoded.role;
     if (err) {
@@ -116,7 +115,7 @@ const getToken = (req) => {
   return null;
 };
 
-let revokedTokens = []; // TODO a more complex structure that would include timestamp and some logic to clear expired tokens
+let revokedTokens = [];
 
 exports.passport = passport;
 exports.router = router;
@@ -124,10 +123,22 @@ exports.ejwt = ejwt({
   secret: config.token.secret,
   userProperty: 'token',
   isRevoked: (req, payload, done) => {
+    const token = getToken(req);
+    // add account object ot request for permissions
+    jwt.verify(token, config.token.secret, (err, decoded) => {
+      if (err) {
+        res.status(401).send(err);
+      } else {
+        req.account = {
+          email: decoded.email,
+          role: decoded.role
+        }
+      }
+    });
+    // check for revoked tokens
     if (revokedTokens.length === 0) {
       return done(null, false);
     }
-    const token = getToken(req);
     const now = new Date();
     let isFound = false;
     for (let i = 0; i < revokedTokens; i++) {
