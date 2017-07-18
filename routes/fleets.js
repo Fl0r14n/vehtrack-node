@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
+const roles = require('../util/roles').roles;
+const checkForRole = require('../util/roles').checkForRole;
 
 const attributes = ['name', 'parent_id'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const userAttributes = ['username'];
 const deviceAttributes = ['serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
 
-router.get('/', (req, res) => {
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO fleet admin should not be allowed to query without parentId
   const limit = req.query.limit;
   const offset = req.query.offset;
   const name = req.query.name;
@@ -38,7 +41,8 @@ router.get('/', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO fleet admin should not be allowed to create top level fleets
   if (Array.isArray(req.body)) {
     models.Fleet.bulkCreate(req.body, {
       attributes: attributes
@@ -58,7 +62,7 @@ router.post('/', (req, res) => {
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', checkForRole([roles.ADMIN]), (req, res) => {
   models.Fleet.findById(req.params.id, {
     attributes: attributes
   }).then((fleet) => {
@@ -68,7 +72,8 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   models.Fleet.update(req.body, {
     where: {
@@ -86,7 +91,8 @@ router.put('/:id', (req, res) => {
   });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   models.Fleet.destroy({
     where: {
       id: req.params.id
@@ -100,7 +106,8 @@ router.delete('/:id', (req, res) => {
   });
 });
 
-router.get('/:id/user', (req,res) => {
+router.get('/:id/user', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   const limit = req.query.limit;
   const offset = req.query.offset;
@@ -117,7 +124,7 @@ router.get('/:id/user', (req,res) => {
   };
 
   models.Fleet.findById(id).then((fleet) => {
-    if(fleet) {
+    if (fleet) {
       fleet.getUsers(query).then((users) => {
         res.json(users);
       }).catch((err) => {
@@ -131,7 +138,8 @@ router.get('/:id/user', (req,res) => {
   });
 });
 
-router.post('/:id/user/:email', (req, res) => {
+router.post('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   const email = req.params.email;
   models.Fleet.findById(id).then((fleet) => {
@@ -165,7 +173,8 @@ router.post('/:id/user/:email', (req, res) => {
   });
 });
 
-router.delete('/:id/user/:email', (req, res) => {
+router.delete('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   const email = req.params.email;
   models.Fleet.findById(id).then((fleet) => {
@@ -199,7 +208,8 @@ router.delete('/:id/user/:email', (req, res) => {
   });
 });
 
-router.get('/:id/device', (req,res) => {
+router.get('/:id/device', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+  //TODO check belonging for fleet admin and user
   const id = req.params.id;
   const limit = req.query.limit;
   const offset = req.query.offset;
@@ -216,7 +226,7 @@ router.get('/:id/device', (req,res) => {
   };
 
   models.Fleet.findById(id).then((fleet) => {
-    if(fleet) {
+    if (fleet) {
       fleet.getDevices(query).then((devices) => {
         res.json(devices);
       }).catch((err) => {
@@ -230,7 +240,8 @@ router.get('/:id/device', (req,res) => {
   });
 });
 
-router.post('/:id/device/:email', (req, res) => {
+router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   const email = req.params.email;
   models.Fleet.findById(id).then((fleet) => {
@@ -241,7 +252,7 @@ router.post('/:id/device/:email', (req, res) => {
           as: 'account',
           where: {
             email: email
-          },
+          }
         }],
       }).then((device) => {
         if (device) {
@@ -264,7 +275,8 @@ router.post('/:id/device/:email', (req, res) => {
   });
 });
 
-router.delete('/:id/device/:email', (req, res) => {
+router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  //TODO check belonging for fleet admin
   const id = req.params.id;
   const email = req.params.email;
   models.Fleet.findById(id).then((fleet) => {

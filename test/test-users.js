@@ -57,7 +57,7 @@ describe('Users', () => {
   before((done) => {
     init().then((res) => {
       initObj = res;
-      done()
+      done();
     });
   });
 
@@ -164,5 +164,17 @@ describe('Users', () => {
       should.not.exist(res.body);
       done();
     });
+  });
+
+  it(`USER should get his fleets`, (done) => {
+    done();
+  });
+
+  it(`FLEET_ADMIN should get his top level fleets`, (done) => {
+    done();
+  });
+
+  it(`ADMIN should get all top level fleets`, (done) => {
+    done();
   });
 });

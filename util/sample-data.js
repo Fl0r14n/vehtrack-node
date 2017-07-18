@@ -1,8 +1,8 @@
 'use strict';
 
-const L = require('./logger');
-const models = require('./models');
-const sampleUtil = require('./sample-util');
+const L = require('./util/logger');
+const models = require('./models/index');
+const sampleUtil = require('./util/sample-util');
 
 const GENERATE_WITH_FLEETS = true;
 const DOMAIN = '@vehtrack.com';

@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: DataTypes.UUIDV4
     },
     type: {
-      type:DataTypes.STRING(30),
+      type: DataTypes.STRING(30),
       defaultValue: ''
     },
     description: {
@@ -111,24 +111,21 @@ module.exports = (sequelize, DataTypes) => {
     }
     return (nCheck % 10) === 0;
   };
-  Device.getFleetDevices = (fleetName) => {
-    return new Promise(function (resolve, reject) {
-      sequelize.models.Fleet.findOne({
-        where: {
-          name: fleetName
-        }
-      }).then(function (fleet) {
-        Device.findAll({
-          where: {
-            fleets: {
-              $in: fleet.getDescendants()
-            }
-          }
-        }).then(function (users) {
-          resolve(users);
-        });
-      });
+  Device.getFleetDevices = async (fleetName) => {
+    const fleet = await sequelize.models.Fleet.findOne({
+      where: {
+        name: fleetName
+      }
     });
+    if (fleet) {
+      return await sequelize.models.Device.findAll({
+        where: {
+          fleets: {
+            $in: fleet.getDescendants()
+          }
+        }
+      });
+    }
   };
   return Device;
 };

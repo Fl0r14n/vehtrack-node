@@ -3,7 +3,7 @@ const http = require('http');
 const concat = require('concat-stream');
 const xml2json = require('xml2json');
 const querystring = require('querystring');
-const models = require('./models');
+const models = require('../models/index');
 
 const MIN_POSITIONS_JOURNEY = 100;
 const MAX_POSITIONS_JOURNEY = 150;

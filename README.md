@@ -47,3 +47,20 @@ node_modules/.bin/sequelize migration:create
 # generate schema from models. Move resulted files to migrations folder
 node generate-schema.js
 ```
+
+###Testing
+
+```bash
+# install mocha
+npm install -g mocha
+
+# run the tests
+mocha
+
+# run test with debug
+mocha ./test/test.js --inspect-brk
+
+#open chrome on chorme://inspect
+
+```
+

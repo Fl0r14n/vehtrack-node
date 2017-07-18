@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
+const roles = require('../util/roles').roles;
+const checkForRole = require('../util/roles').checkForRole;
 
 const attributes = ['serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
 
-router.get('/', (req, res) => {
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   const limit = req.query.limit;
   const offset = req.query.offset;
   const fleetId = req.query.fleets__id;
@@ -38,7 +40,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkForRole([roles.ADMIN]), (req, res) => {
   if (Array.isArray(req.body)) {
     createDevices(req.body).then((devices) => {
       res.status(201).json(devices);
@@ -70,7 +72,7 @@ const createDevices = async (devices) => {
   return results;
 };
 
-router.get('/:email', (req, res) => {
+router.get('/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   models.Device.findOne({
     include: [{
       model: models.Account,
@@ -88,7 +90,7 @@ router.get('/:email', (req, res) => {
   });
 });
 
-router.put('/:email', (req, res) => {
+router.put('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   updateDevice(req.params.email, req.body).then((device) => {
     res.json(device);
   }).catch((err) => {
@@ -125,7 +127,7 @@ const updateDevice = async (email, content) => {
   });
 };
 
-router.delete('/:email', (req, res) => {
+router.delete('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   models.Account.destroy({
     where: {
       email: req.params.email,

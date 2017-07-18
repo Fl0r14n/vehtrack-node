@@ -1,6 +1,6 @@
 "use strict";
 
-var _models = require("./models");
+var _models = require("./models/index");
 
 var models = _interopRequireWildcard(_models);
 

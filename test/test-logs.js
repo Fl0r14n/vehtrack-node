@@ -5,7 +5,7 @@ const chaiHttp = require('chai-http');
 const should = chai.should();
 const server = require('../app');
 const models = require('../models');
-const sampleUtil = require('../sample-util');
+const sampleUtil = require('../util/sample-util');
 
 const API_ROOT = '/api/v1';
 chai.use(chaiHttp);

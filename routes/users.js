@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
+const roles = require('../util/roles').roles;
+const checkForRole = require('../util/roles').checkForRole;
 
 const attributes = ['username'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
+const fleetAttributes = ['name', 'parent_id'];
 
-router.get('/', (req, res) => {
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   const limit = req.query.limit;
   const offset = req.query.offset;
   const fleetId = req.query.fleets__id;
@@ -38,7 +41,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkForRole([roles.ADMIN]), (req, res) => {
   if (Array.isArray(req.body)) {
     createUsers(req.body).then((users) => {
       res.status(201).json(users);
@@ -70,7 +73,7 @@ const createUsers = async (users) => {
   return results;
 };
 
-router.get('/:email', (req, res) => {
+router.get('/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   models.User.findOne({
     include: [{
       model: models.Account,
@@ -88,7 +91,7 @@ router.get('/:email', (req, res) => {
   });
 });
 
-router.put('/:email', (req, res) => {
+router.put('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   updateUser(req.params.email, req.body).then((user) => {
     res.json(user);
   }).catch((err) => {
@@ -125,7 +128,7 @@ const updateUser = async (email, content) => {
   });
 };
 
-router.delete('/:email', (req, res) => {
+router.delete('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   models.Account.destroy({
     where: {
       email: req.params.email,
@@ -138,6 +141,80 @@ router.delete('/:email', (req, res) => {
   }).catch((err) => {
     res.status(500).send(err);
   });
+});
+
+router.get('/fleet', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+  const email = req.account.email;
+  let query = {
+    where: {},
+    offset: offset || 0,
+    limit: limit || 50,
+    attributes: fleetAttributes
+  };
+  switch (req.account.role) {
+    case roles.ADMIN: {
+      // get top level fleets
+      query.where.parentId = null;
+      models.Fleet.findAll(query).then((fleets) => {
+        res.json(fleets);
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    case roles.FLEET_ADMIN: {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+          attributes: accountAttributes
+        }],
+        attributes: attributes
+      }).then((user) => {
+        // get top level fleet
+        query.where.parentId = null;
+        user.getFleets(query).then((fleets) => {
+          res.json(fleets);
+        }).catch((err) => {
+          res.status(500).send(err);
+        });
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    case roles.USER: {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+          attributes: accountAttributes
+        }],
+        attributes: attributes
+      }).then((user) => {
+        // get user fleets usually just one
+        user.getFleets(query).then((fleets) => {
+          res.json(fleets);
+        }).catch((err) => {
+          res.status(500).send(err);
+        });
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    default: {
+      res.sendStatus(400);
+    }
+  }
 });
 
 module.exports = router;

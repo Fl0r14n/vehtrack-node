@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
+const roles = require('../util/roles').roles;
+const checkForRole = require('../util/roles').checkForRole;
 
 const attributes = ['id', 'timestamp', 'level', 'message', 'journey_id', 'device_id'];
 
-router.get('/', (req, res) => {
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   const limit = req.query.limit;
   const offset = req.query.offset;
   const deviceId = req.query.device__id;
@@ -55,7 +57,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkForRole([roles.ADMIN, roles.DEVICE]), (req, res) => {
   if (Array.isArray(req.body)) {
     models.Log.bulkCreate(req.body, {
       attributes: attributes
@@ -75,7 +77,7 @@ router.post('/', (req, res) => {
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   models.Log.findById(req.params.id, {
     attributes: attributes
   }).then((log) => {
@@ -85,7 +87,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', checkForRole([roles.ADMIN]), (req, res) => {
   const id = req.params.id;
   models.Log.update(req.body, {
     where: {
@@ -103,7 +105,7 @@ router.put('/:id', (req, res) => {
   });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', checkForRole([roles.ADMIN]), (req, res) => {
   models.Log.destroy({
     where: {
       id: req.params.id

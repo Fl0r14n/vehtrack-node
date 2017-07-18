@@ -22,24 +22,5 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: 'user_id'
     })
   };
-  User.getFleetUsers = (fleetName) => {
-    return new Promise(function (resolve, reject) {
-      sequelize.models.Fleet.findOne({
-        where: {
-          name: fleetName
-        }
-      }).then(function (fleet) {
-        User.findAll({
-          where: {
-            fleet: {
-              $in: fleet.getDescendants()
-            }
-          }
-        }).then(function (users) {
-          resolve(users);
-        });
-      });
-    });
-  };
   return User;
 };

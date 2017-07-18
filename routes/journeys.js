@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const models = require('../models');
+const roles = require('../util/roles').roles;
+const checkForRole = require('../util/roles').checkForRole;
 
 const attributes = ['startLatitude', 'startLongitude', 'startTimestamp', 'stopLatitude', 'stopLongitude', 'stopTimestamp', 'distance', 'averageSpeed', 'maximumSpeed', 'duration'];
 
-router.get('/', (req, res) => {
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   const limit = req.query.limit;
   const offset = req.query.offset;
   const deviceId = req.query.device__id;
@@ -41,7 +43,7 @@ router.get('/', (req, res) => {
   });
 });
 
-router.post('/', (req, res) => {
+router.post('/', checkForRole([roles.ADMIN, roles.DEVICE]), (req, res) => {
   if (Array.isArray(req.body)) {
     models.Journey.bulkCreate(req.body, {
       attributes: attributes
@@ -61,7 +63,7 @@ router.post('/', (req, res) => {
   }
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   models.Journey.findById(req.params.id, {
     attributes: attributes
   }).then((journey) => {
@@ -71,7 +73,7 @@ router.get('/:id', (req, res) => {
   });
 });
 
-router.put('/:id', (req, res) => {
+router.put('/:id', checkForRole([roles.ADMIN]), (req, res) => {
   const id = req.params.id;
   models.Journey.update(req.body, {
     where: {
@@ -89,7 +91,7 @@ router.put('/:id', (req, res) => {
   });
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', checkForRole([roles.ADMIN]), (req, res) => {
   models.Journey.destroy({
     where: {
       id: req.params.id
