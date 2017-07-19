@@ -9,7 +9,108 @@ const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
 const fleetAttributes = ['name', 'parent_id'];
 
-router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+router.get('/profile', (req, res) => {
+  const email = req.account.email;
+  models.User.findOne({
+    include: [{
+      model: models.Account,
+      as: 'account',
+      where: {
+        email: email
+      },
+      attributes: accountAttributes
+    }],
+    attributes: attributes
+  }).then((user) => {
+    res.json(user);
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
+});
+
+router.put('/profile', (req, res) => {
+  updateUser(req.account.email, req.body).then((user) => {
+    res.json(user);
+  }).catch((err) => {
+    res.status(500).send(err);
+  });
+});
+
+router.get('/fleet', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+  const limit = req.query.limit;
+  const offset = req.query.offset;
+  const email = req.account.email;
+  let query = {
+    where: {},
+    offset: offset || 0,
+    limit: limit || 50,
+    attributes: fleetAttributes
+  };
+  switch (req.account.role) {
+    case roles.ADMIN: {
+      // get top level fleets
+      query.where.parent_id = null;
+      models.Fleet.findAll(query).then((fleets) => {
+        res.json(fleets);
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    case roles.FLEET_ADMIN: {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+          attributes: accountAttributes
+        }],
+        attributes: attributes
+      }).then((user) => {
+        // get top level fleet
+        query.where.parent_id = null;
+        user.getFleets(query).then((fleets) => {
+          res.json(fleets);
+        }).catch((err) => {
+          res.status(500).send(err);
+        });
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    case roles.USER: {
+      models.User.findOne({
+        include: [{
+          model: models.Account,
+          as: 'account',
+          where: {
+            email: email
+          },
+          attributes: accountAttributes
+        }],
+        attributes: attributes
+      }).then((user) => {
+        // get user fleets usually just one
+        user.getFleets(query).then((fleets) => {
+          res.json(fleets);
+        }).catch((err) => {
+          res.status(500).send(err);
+        });
+      }).catch((err) => {
+        res.status(500).send(err);
+      });
+      break;
+    }
+    default: {
+      res.sendStatus(400);
+    }
+  }
+});
+
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
   const limit = req.query.limit;
   const offset = req.query.offset;
   const fleetId = req.query.fleets__id;
@@ -73,7 +174,7 @@ const createUsers = async (users) => {
   return results;
 };
 
-router.get('/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+router.get('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   models.User.findOne({
     include: [{
       model: models.Account,
@@ -141,80 +242,6 @@ router.delete('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   }).catch((err) => {
     res.status(500).send(err);
   });
-});
-
-router.get('/fleet', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
-  const limit = req.query.limit;
-  const offset = req.query.offset;
-  const email = req.account.email;
-  let query = {
-    where: {},
-    offset: offset || 0,
-    limit: limit || 50,
-    attributes: fleetAttributes
-  };
-  switch (req.account.role) {
-    case roles.ADMIN: {
-      // get top level fleets
-      query.where.parentId = null;
-      models.Fleet.findAll(query).then((fleets) => {
-        res.json(fleets);
-      }).catch((err) => {
-        res.status(500).send(err);
-      });
-      break;
-    }
-    case roles.FLEET_ADMIN: {
-      models.User.findOne({
-        include: [{
-          model: models.Account,
-          as: 'account',
-          where: {
-            email: email
-          },
-          attributes: accountAttributes
-        }],
-        attributes: attributes
-      }).then((user) => {
-        // get top level fleet
-        query.where.parentId = null;
-        user.getFleets(query).then((fleets) => {
-          res.json(fleets);
-        }).catch((err) => {
-          res.status(500).send(err);
-        });
-      }).catch((err) => {
-        res.status(500).send(err);
-      });
-      break;
-    }
-    case roles.USER: {
-      models.User.findOne({
-        include: [{
-          model: models.Account,
-          as: 'account',
-          where: {
-            email: email
-          },
-          attributes: accountAttributes
-        }],
-        attributes: attributes
-      }).then((user) => {
-        // get user fleets usually just one
-        user.getFleets(query).then((fleets) => {
-          res.json(fleets);
-        }).catch((err) => {
-          res.status(500).send(err);
-        });
-      }).catch((err) => {
-        res.status(500).send(err);
-      });
-      break;
-    }
-    default: {
-      res.sendStatus(400);
-    }
-  }
 });
 
 module.exports = router;
