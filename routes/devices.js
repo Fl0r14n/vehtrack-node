@@ -72,7 +72,7 @@ const createDevices = async (devices) => {
   return results;
 };
 
-router.get('/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
+router.get('/:email', checkForRole([roles.ADMIN]), (req, res) => {
   models.Device.findOne({
     include: [{
       model: models.Account,

@@ -5,7 +5,7 @@ const chaiHttp = require('chai-http');
 const should = chai.should();
 const server = require('../app');
 const models = require('../models');
-const sampleUtil = require('../util/sample-util');
+const generateJourneysForDevice = require('./util/generate-journeys').generateJourneysForDevice;
 
 const API_ROOT = '/api/v1';
 chai.use(chaiHttp);
@@ -56,7 +56,7 @@ const createSampleData = async () => {
       as: 'account'
     }]
   });
-  let journeys = await sampleUtil.generateJourneysForDevice(device, START_DATE, STOP_DATE);
+  let journeys = await generateJourneysForDevice(device, START_DATE, STOP_DATE);
   return {
     user: user,
     device: device,

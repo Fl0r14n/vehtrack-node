@@ -5,51 +5,10 @@ const chaiHttp = require('chai-http');
 const should = chai.should();
 const server = require('../app');
 const models = require('../models');
+const createUsers = require('../util/generate-users').createUsers;
 
 const API_ROOT = '/api/v1';
 chai.use(chaiHttp);
-
-const DOMAIN = 'test.com';
-const PASSWORD = 'hackme';
-
-const createUsers = async () => {
-  let users = {};
-  let tokens = {};
-  let roleNames = ['ADMIN', 'FLEET_ADMIN', 'USER', 'DEVICE'];
-
-  for (let roleName of roleNames) {
-    const email = `${roleName}@${DOMAIN}`;
-    // create role
-    let role = await models.AccountRole.create({
-      name: roleName,
-      description: roleName
-    });
-    // create user
-    users[roleName] = await models.User.create({
-      username: roleName,
-      account: {
-        email: email,
-        password: PASSWORD,
-        role_id: role.name
-      }
-    }, {
-      include: [{
-        model: models.Account,
-        as: 'account'
-      }]
-    });
-    // do login
-    const res = await chai.request(server).post(`/auth/login`).send({
-      email: `${roleName}@${DOMAIN}`,
-      password: PASSWORD
-    });
-    tokens[roleName] = res.body.token;
-  }
-  return {
-    users: users,
-    tokens: tokens
-  };
-};
 
 const createFleets = async (users) => {
   let fleets = [];
@@ -178,7 +137,7 @@ describe('Users', () => {
       username: expected,
       account: {
         email: 'mockuser@test.com',
-        password: PASSWORD,
+        password: 'hackme',
         role_id: 'USER'
       }
     }).end((err, res) => {
@@ -196,14 +155,14 @@ describe('Users', () => {
       username: 'Mock1',
       account: {
         email: 'mock1user@test.com',
-        password: PASSWORD,
+        password: 'hackme',
         role_id: 'USER'
       }
     }, {
       username: 'Mock2',
       account: {
         email: 'mock2user@test.com',
-        password: PASSWORD,
+        password: 'hackme',
         role_id: 'USER'
       }
     }]).end((err, res) => {

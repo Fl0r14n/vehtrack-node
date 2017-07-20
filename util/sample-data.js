@@ -2,7 +2,7 @@
 
 const L = require('./util/logger');
 const models = require('./models/index');
-const sampleUtil = require('./util/sample-util');
+const generateJourneysForDevice = require('./util/generate-journeys').generateJourneysForDevice;
 
 const GENERATE_WITH_FLEETS = true;
 const DOMAIN = '@vehtrack.com';
@@ -283,7 +283,7 @@ models.sequelize.sync().then(() => {
         });
         generateDevicesForFleets(fleets).then((devices) => {
           for (let device of devices) {
-            sampleUtil.generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
+            generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
           }
         })
       });
@@ -292,7 +292,7 @@ models.sequelize.sync().then(() => {
       });
       generateDevices().then((devices) => {
         for (let device of devices) {
-          sampleUtil.generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
+          generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
         }
       });
     }
