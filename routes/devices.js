@@ -4,7 +4,7 @@ const models = require('../models');
 const roles = require('../util/roles').roles;
 const checkForRole = require('../util/roles').checkForRole;
 
-const attributes = ['serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
+const attributes = ['id', 'serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
 

@@ -4,10 +4,10 @@ const models = require('../models');
 const roles = require('../util/roles').roles;
 const checkForRole = require('../util/roles').checkForRole;
 
-const attributes = ['name', 'parent_id'];
+const attributes = ['id', 'name', 'parent_id'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
-const userAttributes = ['username'];
-const deviceAttributes = ['serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
+const userAttributes = ['id', 'username'];
+const deviceAttributes = ['id', 'serial', 'type', 'description', 'phone', 'plate', 'vin', 'imei', 'imsi', 'msisdn'];
 
 router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
   //TODO fleet admin should not be allowed to query without parentId

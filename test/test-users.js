@@ -51,9 +51,31 @@ const createUsers = async () => {
   };
 };
 
+const createFleets = async (users) => {
+  let fleets = [];
+  const fleetA = await models.Fleet.create({
+    name: 'fleetA'
+  });
+  fleets.push(fleetA);
+  const fleetB = await models.Fleet.create({
+    name: 'fleetB'
+  });
+  fleets.push(fleetB);
+  const fleetC = await models.Fleet.create({
+    name: 'fleetC',
+    parent_id: fleetA.id
+  });
+  fleets.push(fleetC);
+  await fleetA.setUsers([users['FLEET_ADMIN']]);
+  await fleetC.setUsers([users['USER']]);
+  return fleets;
+};
+
 const init = async () => {
   await models.sequelize.sync();
-  return await createUsers();
+  let result = await createUsers();
+  result['fleets'] = await createFleets(result.users);
+  return result;
 };
 
 describe('Users', () => {
@@ -99,16 +121,19 @@ describe('Users', () => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('array');
+      res.body.length.should.equal(1);
+      res.body[0].name.should.equal('fleetC');
       done();
     });
   });
 
   it(`FLEET_ADMIN should get his top level fleets`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}/fleet`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
-      console.log(res.body);
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('array');
+      res.body.length.should.equal(1);
+      res.body[0].name.should.equal('fleetA');
       done();
     });
   });
@@ -118,6 +143,10 @@ describe('Users', () => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('array');
+      res.body.length.should.equal(2);
+      res.body[0].name.should.equal('fleetA');
+      res.body[1].name.should.equal('fleetB');
+      res.body[1].name.should.equal('fleetB');
       done();
     });
   });

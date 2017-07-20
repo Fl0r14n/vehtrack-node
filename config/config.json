@@ -22,6 +22,29 @@
       }
     }
   },
+  "integration": {
+    "database": {
+      "dialect": "sqlite",
+      "storage": "./db.integration.sqlite",
+      "define": {
+        "freezeTableName": true
+      },
+      "sync": {
+        "force": true
+      },
+      "syncOnAssociation": true
+    },
+    "jwt": {
+      "token": {
+        "secret": "hackme",
+        "expiresIn": 30
+      },
+      "refreshToken": {
+        "secret": "whatever",
+        "expiresIn": 60
+      }
+    }
+  },
   "test": {
     "database": {
       "dialect": "sqlite",

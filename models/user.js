@@ -16,10 +16,10 @@ module.exports = (sequelize, DataTypes) => {
       }
     });
     User.belongsToMany(models.Fleet, {
-      as: 'Fleets',
+      as: 'fleets',
       through: 'users_fleets',
-      foreignKey: 'fleet_id',
-      otherKey: 'user_id'
+      foreignKey: 'user_id',
+      otherKey: 'fleet_id'
     })
   };
   return User;

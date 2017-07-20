@@ -4,10 +4,10 @@ const models = require('../models');
 const roles = require('../util/roles').roles;
 const checkForRole = require('../util/roles').checkForRole;
 
-const attributes = ['username'];
+const attributes = ['id', 'username'];
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
-const fleetAttributes = ['name', 'parent_id'];
+const fleetAttributes = ['id', 'name', 'parent_id'];
 
 router.get('/profile', (req, res) => {
   const email = req.account.email;

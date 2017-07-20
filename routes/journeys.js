@@ -4,7 +4,7 @@ const models = require('../models');
 const roles = require('../util/roles').roles;
 const checkForRole = require('../util/roles').checkForRole;
 
-const attributes = ['startLatitude', 'startLongitude', 'startTimestamp', 'stopLatitude', 'stopLongitude', 'stopTimestamp', 'distance', 'averageSpeed', 'maximumSpeed', 'duration'];
+const attributes = ['id', 'startLatitude', 'startLongitude', 'startTimestamp', 'stopLatitude', 'stopLongitude', 'stopTimestamp', 'distance', 'averageSpeed', 'maximumSpeed', 'duration'];
 
 router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
   const limit = req.query.limit;
