@@ -21,19 +21,36 @@ const createUsers = async () => {
       description: roleName
     });
     // create user
-    users[roleName] = await models.User.create({
-      username: roleName,
-      account: {
-        email: email,
-        password: PASSWORD,
-        role_id: role.name
-      }
-    }, {
-      include: [{
-        model: models.Account,
-        as: 'account'
-      }]
-    });
+    if (roleName !== 'DEVICE') {
+      users[roleName] = await models.User.create({
+        username: roleName,
+        account: {
+          email: email,
+          password: PASSWORD,
+          role_id: role.name
+        }
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      });
+    } else {
+      users[roleName] = await models.Device.create({
+        type: 'test',
+        description: 'test device',
+        account: {
+          email: email,
+          password: PASSWORD,
+          role_id: role.name
+        }
+      }, {
+        include: [{
+          model: models.Account,
+          as: 'account'
+        }]
+      });
+    }
     // do login
     const res = await chai.request(server).post(`/auth/login`).send({
       email: `${roleName}@${DOMAIN}`,
