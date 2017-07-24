@@ -15,5 +15,10 @@ const checkForRole = (roles) => {
   }
 };
 
+const isRole = (req, role) => {
+  return req.account && req.account.role === role;
+};
+
 exports.roles = roles;
 exports.checkForRole = checkForRole;
+exports.isRole = isRole;
