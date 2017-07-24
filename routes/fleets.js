@@ -92,6 +92,7 @@ router.put('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) =>
 });
 
 router.delete('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
+  console.log('HERE=================')
   //TODO check belonging for fleet admin
   models.Fleet.destroy({
     where: {
