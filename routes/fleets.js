@@ -16,8 +16,8 @@ const isFleetOwner = () => {
   return (req, res, next) => {
     if (isRole(req, roles.FLEET_ADMIN)) {
       const email = req.account.email;
-      const id = req.param.id;
-      const parentId = req.query.parent__id || req.body.parent_id;
+      const id = req.params.id;
+      const parentId = Number(req.query.parent__id || req.body.parent_id);
       findRootFleetLevel(email, id, parentId).then((level) => {
         if (level >= 0) {
           next(level);
@@ -69,162 +69,184 @@ const findRootFleetLevel = async (email, id, parentId) => {
       return -1;
     }
   }
+  console.log(`email ${email}, id: ${id}, parent ${parentFleetId}`);
   if (parentFleetId) {
     if (userFleets && userFleets.length > 0) {
-      // go up through parents
+      console.log('HERE');
+      // search fleet admin root fleets
+      if (userFleets.filter((fleet) => {
+          console.log('INSODE')
+          console.log(fleet.id);
+          console.log(parentFleetId);
+          return fleet.id === parentFleetId;
+        }).length > 0) {
+        console.log('HERE0');
+        return 0;
+      }
+      console.log('HERE01');
+      // else go up through parents
       for (let i = 0; i < MAX_FLEET_CHILD_DEPTH; i++) {
+        console.log('HERE1');
         let parentFleet = await models.Fleet.findOne({
           where: {
             parent_id: parentFleetId
           }
         });
-        if (parentFleet && userFleets.filter((fleet) => {
-            return fleet.id === parentFleet.id;
-          }).length > 0) {
-          return i;
+        console.log('HERE2');
+        if (parentFleet) {
+          console.log(parentFleet.id);
+          console.log('HERE3');
+          if (userFleets.filter((fleet) => {
+              return fleet.id === parentFleet.id;
+            }).length > 0) {
+            console.log('FOUND');
+            return i;
+          } else {
+            parentFleetId = parentFleet.id;
+            console.log('NOT FOUND');
+          }
         } else {
-          parentFleetId = parentFleet.id;
+          return -1;
         }
       }
+      return -1;
     }
+  } else {
+    return -1;
   }
 };
 
-router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const limit = req.query.limit;
-  const offset = req.query.offset;
-  const name = req.query.name;
-  const parentId = req.query.parent__id;
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const limit = req.query.limit;
+    const offset = req.query.offset;
+    const name = req.query.name;
+    const parentId = req.query.parent__id;
 
-  let query = {
-    where: {},
-    offset: offset || 0,
-    limit: limit || 50,
-    attributes: attributes
-  };
-  if (name) {
-    query.where.name = name
-  }
-  if (parentId) {
-    if (Array.isArray(parentId)) {
-      query.where.parent_id = {
-        $in: parentId
-      };
-    } else {
-      query.where.parent_id = parentId;
-    }
-  }
-  models.Fleet.findAll(query).then((fleets) => {
-    res.json(fleets);
-  }).catch((err) => {
-    res.status(500).send(err);
-  });
-});
-
-router.post('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), (req, res) => {
-  if (isRole(req, roles.ADMIN) && Array.isArray(req.body)) {
-    models.Fleet.bulkCreate(req.body, {
+    let query = {
+      where: {},
+      offset: offset || 0,
+      limit: limit || 50,
       attributes: attributes
-    }).then(() => {
-      res.status(201).json(req.body);
-    }).catch((err) => {
-      res.status(500).send(err);
-    });
-  } else if (isFleetOwner()(req, res, (level) => {
-      if (level < MAX_FLEET_CHILD_DEPTH - 1) {
-        models.Fleet.create(req.body, {
-          attributes: attributes
-        }).then((fleet) => {
-          res.status(201).json(fleet);
-        }).catch((err) => {
-          res.status(500).send(err);
-        });
+    };
+    if (name) {
+      query.where.name = name
+    }
+    if (parentId) {
+      if (Array.isArray(parentId)) {
+        query.where.parent_id = {
+          $in: parentId
+        };
+      } else {
+        query.where.parent_id = parentId;
       }
-    })) {
-  } else {
-    res.sendStatus(500);
+    }
+    const fleets = await models.Fleet.findAll(query);
+    res.json(fleets);
+  } catch (err) {
+    res.status(500).send(err);
   }
 });
 
-router.get('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  models.Fleet.findById(req.params.id, {
-    attributes: attributes
-  }).then((fleet) => {
-    res.json(fleet);
-  }).catch((err) => {
-    res.status(500).send(err);
-  });
-});
-
-router.put('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  models.Fleet.update(req.body, {
-    where: {
-      id: id
-    },
-    attributes: attributes
-  }).then(() => {
-    models.Fleet.findById(id, {
-      attributes: attributes
-    }).then((log) => {
-      res.json(log);
-    });
-  }).catch((err) => {
-    res.status(500).send(err);
-  });
-});
-
-router.delete('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  models.Fleet.destroy({
-    where: {
-      id: req.params.id
+router.post('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), async (req, res) => {
+  try {
+    if (isRole(req, roles.ADMIN) && Array.isArray(req.body)) {
+      await models.Fleet.bulkCreate(req.body, {
+        attributes: attributes
+      });
+      res.status(201).json(req.body);
+    } else {
+      const level = await findRootFleetLevel(req.account.email, null, req.body.parent_id);
+      if (level < MAX_FLEET_CHILD_DEPTH - 1) {
+        const fleet = await models.Fleet.create(req.body, {
+          attributes: attributes
+        });
+        res.status(201).json(fleet);
+      }
     }
-  }).then((rows) => {
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+router.get('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const fleet = await models.Fleet.findById(req.params.id, {
+      attributes: attributes
+    });
+    res.json(fleet);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+router.put('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    await models.Fleet.update(req.body, {
+      where: {
+        id: id
+      },
+      attributes: attributes
+    });
+    const fleet = await models.Fleet.findById(id, {
+      attributes: attributes
+    });
+    res.json(fleet);
+  } catch (err) {
+    res.status(500).send(err);
+  }
+});
+
+router.delete('/:id', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const rows = await models.Fleet.destroy({
+      where: {
+        id: req.params.id
+      }
+    });
     if (rows > 0) {
       res.sendStatus(204);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.get('/:id/user', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  const limit = req.query.limit;
-  const offset = req.query.offset;
-
-  let query = {
-    include: [{
-      model: models.Account,
-      as: 'account',
-      attributes: accountAttributes
-    }],
-    attributes: userAttributes,
-    offset: offset || 0,
-    limit: limit || 50,
-  };
-
-  models.Fleet.findById(id).then((fleet) => {
+router.get('/:id/user', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const limit = req.query.limit;
+    const offset = req.query.offset;
+    let query = {
+      include: [{
+        model: models.Account,
+        as: 'account',
+        attributes: accountAttributes
+      }],
+      attributes: userAttributes,
+      offset: offset || 0,
+      limit: limit || 50,
+    };
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
-      fleet.getUsers(query).then((users) => {
-        res.json(users);
-      }).catch((err) => {
-        res.status(500).send(err);
-      })
+      const users = await fleet.getUsers(query);
+      res.json(users);
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.post('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  const email = req.params.email;
-  models.Fleet.findById(id).then((fleet) => {
+router.post('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const email = req.params.email;
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
-      models.User.findOne({
+      const user = await models.User.findOne({
         include: [{
           model: models.Account,
           as: 'account',
@@ -232,33 +254,28 @@ router.post('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), 
             email: email
           },
         }],
-      }).then((user) => {
-        if (user) {
-          fleet.addUser(user).then(() => {
-            res.sendStatus(201);
-          }).catch((err) => {
-            res.status(500).send(err);
-          });
-        } else {
-          res.status(400).send(`User with email: ${email} not found`);
-        }
-      }).catch((err) => {
-        res.status(500).send(err);
       });
+      if (user) {
+        await fleet.addUser(user);
+        res.sendStatus(201);
+      } else {
+        res.status(400).send(`User with email: ${email} not found`);
+      }
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.delete('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  const email = req.params.email;
-  models.Fleet.findById(id).then((fleet) => {
+router.delete('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const email = req.params.email;
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
-      models.User.findOne({
+      const user = await models.User.findOne({
         include: [{
           model: models.Account,
           as: 'account',
@@ -266,65 +283,56 @@ router.delete('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN])
             email: email
           },
         }],
-      }).then((user) => {
-        if (user) {
-          fleet.removeUser(user).then(() => {
-            res.sendStatus(201);
-          }).catch((err) => {
-            res.status(500).send(err);
-          });
-        } else {
-          res.status(400).send(`User with email: ${email} not found`);
-        }
-      }).catch((err) => {
-        res.status(500).send(err);
-      })
+      });
+      if (user) {
+        await fleet.removeUser(user)
+        res.sendStatus(201);
+      } else {
+        res.status(400).send(`User with email: ${email} not found`);
+      }
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.get('/:id/device', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), isFleetOwner(), (req, res) => {
+router.get('/:id/device', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), isFleetOwner(), async (req, res) => {
   //TODO check belonging for fleet admin and user
-  const id = req.params.id;
-  const limit = req.query.limit;
-  const offset = req.query.offset;
-
-  let query = {
-    include: [{
-      model: models.Account,
-      as: 'account',
-      attributes: accountAttributes
-    }],
-    attributes: deviceAttributes,
-    offset: offset || 0,
-    limit: limit || 50,
-  };
-
-  models.Fleet.findById(id).then((fleet) => {
+  try {
+    const id = req.params.id;
+    const limit = req.query.limit;
+    const offset = req.query.offset;
+    let query = {
+      include: [{
+        model: models.Account,
+        as: 'account',
+        attributes: accountAttributes
+      }],
+      attributes: deviceAttributes,
+      offset: offset || 0,
+      limit: limit || 50,
+    };
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
-      fleet.getDevices(query).then((devices) => {
-        res.json(devices);
-      }).catch((err) => {
-        res.status(500).send(err);
-      })
+      const devices = await fleet.getDevices(query);
+      res.json(devices);
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  const email = req.params.email;
-  models.Fleet.findById(id).then((fleet) => {
+router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const email = req.params.email;
+    const fleet = await models.Fleet.findById(id)
     if (fleet) {
-      models.Device.findOne({
+      const device = await models.Device.findOne({
         include: [{
           model: models.Account,
           as: 'account',
@@ -332,33 +340,28 @@ router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN])
             email: email
           }
         }],
-      }).then((device) => {
-        if (device) {
-          fleet.addDevice(device).then(() => {
-            res.sendStatus(201);
-          }).catch((err) => {
-            res.status(500).send(err);
-          });
-        } else {
-          res.status(400).send(`Device with email: ${email} not found`);
-        }
-      }).catch((err) => {
-        res.status(500).send(err);
-      })
+      });
+      if (device) {
+        await fleet.addDevice(device);
+        res.sendStatus(201);
+      } else {
+        res.status(400).send(`Device with email: ${email} not found`);
+      }
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), (req, res) => {
-  const id = req.params.id;
-  const email = req.params.email;
-  models.Fleet.findById(id).then((fleet) => {
+router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const email = req.params.email;
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
-      models.Device.findOne({
+      const device = await models.Device.findOne({
         include: [{
           model: models.Account,
           as: 'account',
@@ -366,25 +369,19 @@ router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN
             email: email
           },
         }],
-      }).then((device) => {
-        if (device) {
-          fleet.removeDevice(device).then(() => {
-            res.sendStatus(201);
-          }).catch((err) => {
-            res.status(500).send(err);
-          });
-        } else {
-          res.status(400).send(`Device with email: ${email} not found`);
-        }
-      }).catch((err) => {
-        res.status(500).send(err);
-      })
+      });
+      if (device) {
+        await fleet.removeDevice(device);
+        res.sendStatus(201);
+      } else {
+        res.status(400).send(`Device with email: ${email} not found`);
+      }
     } else {
       res.status(400).send(`Fleet with id: ${id} not found`);
     }
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
 module.exports = router;
