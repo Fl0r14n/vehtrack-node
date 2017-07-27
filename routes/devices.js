@@ -8,51 +8,50 @@ const attributes = ['id', 'serial', 'type', 'description', 'phone', 'plate', 'vi
 const accountAttributes = ['email', 'isActive', 'created', 'lastLogin'];
 const accountAttributesCreate = ['email', 'isActive', 'created', 'lastLogin', 'password'];
 
-router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), (req, res) => {
-  const limit = req.query.limit;
-  const offset = req.query.offset;
-  const fleetId = req.query.fleets__id;
+router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), async (req, res) => {
+  try {
+    const limit = req.query.limit;
+    const offset = req.query.offset;
+    const fleetId = req.query.fleets__id;
 
-  let query = {
-    where: {},
-    include: [{
-      model: models.Account,
-      as: 'account',
-      attributes: accountAttributes
-    }],
-    offset: offset || 0,
-    limit: limit || 50,
-    attributes: attributes
-  };
-  if (fleetId) {
-    if (Array.isArray(fleetId)) {
-      query.where.fleet_id = {
-        $in: fleetId
-      };
-    } else {
-      query.where.fleet_id = fleetId;
+    let query = {
+      where: {},
+      include: [{
+        model: models.Account,
+        as: 'account',
+        attributes: accountAttributes
+      }],
+      offset: offset || 0,
+      limit: limit || 50,
+      attributes: attributes
+    };
+    if (fleetId) {
+      if (Array.isArray(fleetId)) {
+        query.where.fleet_id = {
+          $in: fleetId
+        };
+      } else {
+        query.where.fleet_id = fleetId;
+      }
     }
-  }
-  models.Device.findAll(query).then((devices) => {
+    const devices = await models.Device.findAll(query);
     res.json(devices);
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.post('/', checkForRole([roles.ADMIN]), (req, res) => {
-  if (Array.isArray(req.body)) {
-    createDevices(req.body).then((devices) => {
+router.post('/', checkForRole([roles.ADMIN]), async (req, res) => {
+  try {
+    if (Array.isArray(req.body)) {
+      const devices = await createDevices(req.body);
       res.status(201).json(devices);
-    }).catch((err) => {
-      res.status(500).send(err);
-    });
-  } else {
-    createDevices([req.body]).then((devices) => {
+    } else {
+      const devices = await createDevices([req.body]);
       res.status(201).json(devices[0]);
-    }).catch((err) => {
-      res.status(500).send(err);
-    });
+    }
+  } catch (err) {
+    res.status(500).send(err);
   }
 });
 
@@ -72,30 +71,32 @@ const createDevices = async (devices) => {
   return results;
 };
 
-router.get('/:email', checkForRole([roles.ADMIN]), (req, res) => {
-  models.Device.findOne({
-    include: [{
-      model: models.Account,
-      as: 'account',
-      where: {
-        email: req.params.email
-      },
-      attributes: accountAttributes
-    }],
-    attributes: attributes
-  }).then((device) => {
+router.get('/:email', checkForRole([roles.ADMIN]), async (req, res) => {
+  try {
+    const device = await models.Device.findOne({
+      include: [{
+        model: models.Account,
+        as: 'account',
+        where: {
+          email: req.params.email
+        },
+        attributes: accountAttributes
+      }],
+      attributes: attributes
+    });
     res.json(device);
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
-router.put('/:email', checkForRole([roles.ADMIN]), (req, res) => {
-  updateDevice(req.params.email, req.body).then((device) => {
+router.put('/:email', checkForRole([roles.ADMIN]), async (req, res) => {
+  try {
+    const device = await updateDevice(req.params.email, req.body)
     res.json(device);
-  }).catch((err) => {
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
 const updateDevice = async (email, content) => {
@@ -127,19 +128,18 @@ const updateDevice = async (email, content) => {
   });
 };
 
-router.delete('/:email', checkForRole([roles.ADMIN]), (req, res) => {
-  models.Account.destroy({
-    where: {
-      email: req.params.email,
-      role_id: 'DEVICE'
-    }
-  }).then((rows) => {
-    if (rows > 0) {
-      res.sendStatus(204);
-    }
-  }).catch((err) => {
+router.delete('/:email', checkForRole([roles.ADMIN]), async (req, res) => {
+  try {
+    await models.Account.destroy({
+      where: {
+        email: req.params.email,
+        role_id: 'DEVICE'
+      }
+    });
+    res.sendStatus(204);
+  } catch (err) {
     res.status(500).send(err);
-  });
+  }
 });
 
 module.exports = router;
