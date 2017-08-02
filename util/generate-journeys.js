@@ -29,20 +29,21 @@ let randint = (min, max) => {
 };
 
 const generateJourneysForDevice = async (device, startDate, stopDate) => {
+  let _startDate = startDate;
   let journeys = [];
   const startCity = cityNames[randint(0, cityNames.length - 1)];
   let startPoint = cities[startCity];
-  while (startDate < stopDate) {
+  while (_startDate < stopDate) {
     let stopCity = cityNames[randint(0, cityNames.length - 1)];
     let stopPoint = cities[stopCity];
     while (JSON.stringify(startPoint) === JSON.stringify(stopPoint)) {
       stopCity = cityNames[randint(0, cityNames.length - 1)];
       stopPoint = cities[stopCity];
     }
-    let journey = await generateJourneyForDevice(device, startDate, startPoint, stopPoint);
+    let journey = await generateJourneyForDevice(device, _startDate, startPoint, stopPoint);
     journeys.push(journey);
     startPoint = stopPoint;
-    startDate = new Date((startDate - 0) + journey.duration + 3600000);
+    _startDate = new Date((_startDate - 0) + journey.duration + (3600000 * 8)); // 8h sleep
   }
   return journeys;
 };
@@ -51,12 +52,12 @@ const generateJourneyForDevice = async (device, startDate, startPoint, stopPoint
   let kml = await yourNavigationOrg(startPoint, stopPoint);
   const travelDistance = kml.Document.distance; // km
   const travelTime = kml.Document.traveltime; // sec
-  L.info(`Device: ${device.serial} Distance: ${travelDistance}km Time: ${travelTime / 60 }h`);
+  L.info(`Device: ${device.serial} Distance: ${travelDistance}km Time: ${travelTime / 3600 }h Start: ${JSON.stringify(startPoint)} Stop: ${JSON.stringify(stopPoint)}`);
   if (travelDistance > 0.5 && travelTime > 0) {
-    let stopDate = new Date((startDate - 0) + travelTime * 230400000);
     const duration = travelTime * 1000; // ms
+    const stopDate = new Date((startDate - 0) + duration);
     const distance = travelDistance * 1000; // m
-    const averageSpeed = distance / travelTime;
+    const averageSpeed = travelDistance / (travelTime * 3600); // km/h
     const maximumSpeed = averageSpeed + 30; // +30km/h
     let journey = await models.Journey.create({
       device_id: device.id,

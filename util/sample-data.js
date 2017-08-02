@@ -1,8 +1,8 @@
 'use strict';
 
-const L = require('./util/logger');
-const models = require('./models/index');
-const generateJourneysForDevice = require('./util/generate-journeys').generateJourneysForDevice;
+const L = require('../util/logger');
+const models = require('../models/index');
+const generateJourneysForDevice = require('../util/generate-journeys').generateJourneysForDevice;
 
 const GENERATE_WITH_FLEETS = true;
 const DOMAIN = '@vehtrack.com';
@@ -64,7 +64,7 @@ const generateFleets = async () => {
       try {
         childFleet = await models.Fleet.create({
           name: childName,
-          parentId: parent.parentId
+          parent_id: parent.id
         });
       } catch (err) {
         L.error(err);
@@ -274,27 +274,24 @@ const generateDevices = async () => {
   return devices;
 };
 
-// main
-models.sequelize.sync().then(() => {
-  generateRoles().then((roles) => {
-    if (GENERATE_WITH_FLEETS) {
-      generateFleets().then((fleets) => {
-        generateUsersForFleets(fleets, roles).then((users) => {
-        });
-        generateDevicesForFleets(fleets).then((devices) => {
-          for (let device of devices) {
-            generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
-          }
-        })
-      });
-    } else {
-      generateUsers(roles).then((users) => {
-      });
-      generateDevices().then((devices) => {
-        for (let device of devices) {
-          generateJourneysForDevice(device, null, START_DATE, STOP_DATE);
-        }
-      });
-    }
-  });
+const main = async () => {
+  await models.sequelize.sync();
+  const roles = await generateRoles();
+  let devices;
+  if (GENERATE_WITH_FLEETS) {
+    const fleets = await generateFleets();
+    await generateUsersForFleets(fleets, roles);
+    devices = await generateDevicesForFleets(fleets);
+  } else {
+    await generateUsers(roles);
+    devices = await generateDevices();
+  }
+  for (let device of devices) {
+    await generateJourneysForDevice(device, START_DATE, STOP_DATE);
+  }
+};
+
+main().then(() => {
+  L.info('=========DONE===========');
 });
+
