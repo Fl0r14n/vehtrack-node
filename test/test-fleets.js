@@ -27,6 +27,8 @@ describe('Fleets', () => {
     });
   });
 
+  // CREATION + ASSIGNATION ADMIN --------------------------------------------------------------------------------------
+
   it(`ADMIN should CREATE MULTIPLE on ${endpoint} POST`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).send([{
       name: 'Fleet 1',
@@ -71,6 +73,8 @@ describe('Fleets', () => {
     });
   });
 
+  // CREATION + UPDATE FLEET_ADMIN--------------------------------------------------------------------------------------
+
   it(`FLEET_ADMIN should CREATE SINGLE on ${endpoint} POST`, (done) => {
     const expected = 'Sample Fleet';
     chai.request(server).post(`${API_ROOT}${endpoint}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).send({
@@ -113,28 +117,34 @@ describe('Fleets', () => {
     });
   });
 
-  it(`FLEET_ADMIN should DELETE SINGLE on ${endpoint}/:id DELETE`, (done) => {
-    chai.request(server).delete(`${API_ROOT}${endpoint}/3`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
-      res.should.have.status(204);
+  // USER READ DEVICES--------------------------------------------------------------------------------------------------
+
+  it(`USER should READ ALL devices assigned to fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/1/device/`).set('Authorization', `Bearer ${initObj.tokens['USER']}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
       done();
-    });
+    })
   });
 
-  it(`FLEET_ADMIN should NOT DELETE TOP SINGLE on ${endpoint}/:id DELETE`, (done) => {
-    chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+  it(`USER should NOT READ ALL devices assigned to OTHERS fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/3/device/`).set('Authorization', `Bearer ${initObj.tokens['USER']}`).end((err, res) => {
       res.should.have.status(400);
       done();
-    });
+    })
   });
 
-  it(`FLEET_ADMIN should ASSIGN user to fleet`, (done) => {
+  // ASSIGN USERS ------------------------------------------------------------------------------------------------------
+
+  it(`FLEET_ADMIN should ASSIGN user to PARENT fleet`, (done) => {
     chai.request(server).post(`${API_ROOT}${endpoint}/1/user/${initObj.users['USER'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(201);
       done();
     })
   });
 
-  it(`FLEET_ADMIN should READ ALL users assigned to fleet`, (done) => {
+  it(`FLEET_ADMIN should READ ALL users assigned to PARENT fleet`, (done) => {
     chai.request(server).get(`${API_ROOT}${endpoint}/1/user/`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
@@ -143,16 +153,47 @@ describe('Fleets', () => {
     })
   });
 
-  it(`FLEET_ADMIN should REMOVE user from fleet`, (done) => {
+  it(`FLEET_ADMIN should REMOVE user from PARENT fleet`, (done) => {
     chai.request(server).delete(`${API_ROOT}${endpoint}/1/user/${initObj.users['USER'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(204);
       done();
     })
   });
 
-  it(`FLEET_ADMIN should ASSIGN device to fleet`, (done) => {
-    chai.request(server).post(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+  //--------------------------------------------------------------------------------------------------------------------
+
+  it(`FLEET_ADMIN should ASSIGN user to CHILD fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/3/user/${initObj.users['USER'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`FLEET_ADMIN should READ ALL users assigned to CHILD fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/3/user/`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    })
+  });
+
+  it(`FLEET_ADMIN should REMOVE user from CHILD fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/3/user/${initObj.users['USER'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(204);
+      done();
+    })
+  });
+
+  // ASSIGN DEVICES ----------------------------------------------------------------------------------------------------
+
+
+
+  // -------------------------------------------------------------------------------------------------------------------
+
+  it(`FLEET_ADMIN should NOT ASSIGN device to PARENT fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(400);
       done();
     })
   });
@@ -166,8 +207,24 @@ describe('Fleets', () => {
     })
   });
 
-  it(`USER should READ ALL devices assigned to fleet`, (done) => {
-    chai.request(server).get(`${API_ROOT}${endpoint}/1/device/`).set('Authorization', `Bearer ${initObj.tokens['USER']}`).end((err, res) => {
+  it(`FLEET_ADMIN should NOT REMOVE device from PARENT fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(400);
+      done();
+    })
+  });
+
+  //--------------------------------------------------------------------------------------------------------------------
+
+  it(`FLEET_ADMIN should ASSIGN device to CHILD fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/3/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`FLEET_ADMIN should READ ALL devices assigned to fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/3/device/`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(200);
       res.should.be.json;
       res.body.should.be.a('array');
@@ -175,11 +232,77 @@ describe('Fleets', () => {
     })
   });
 
-  it(`FLEET_ADMIN should REMOVE device from fleet`, (done) => {
-    chai.request(server).delete(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+  it(`FLEET_ADMIN should REMOVE device from CHILD fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/3/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
       res.should.have.status(204);
       done();
     })
+  });
+
+  //--------------------------------------------------------------------------------------------------------------------
+
+  it(`ADMIN should ASSIGN device to PARENT fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`ADMIN should READ ALL devices assigned to PARENT fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/1/device/`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    })
+  });
+
+  it(`ADMIN should REMOVE device from PARENT fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(204);
+      done();
+    })
+  });
+
+  //--------------------------------------------------------------------------------------------------------------------
+
+  it(`ADMIN should ASSIGN device to CHILD fleet`, (done) => {
+    chai.request(server).post(`${API_ROOT}${endpoint}/3/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(201);
+      done();
+    })
+  });
+
+  it(`ADMIN should READ ALL devices assigned to CHILD fleet`, (done) => {
+    chai.request(server).get(`${API_ROOT}${endpoint}/3/device/`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(200);
+      res.should.be.json;
+      res.body.should.be.a('array');
+      done();
+    })
+  });
+
+  it(`ADMIN should REMOVE device from CHILD fleet`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/3/device/${initObj.users['DEVICE'].account.email}`).set('Authorization', `Bearer ${initObj.tokens['ADMIN']}`).end((err, res) => {
+      res.should.have.status(204);
+      done();
+    })
+  });
+
+  // DELETION ----------------------------------------------------------------------------------------------------
+
+  it(`FLEET_ADMIN should DELETE SINGLE on ${endpoint}/:id DELETE`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/3`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(204);
+      done();
+    });
+  });
+
+  it(`FLEET_ADMIN should NOT DELETE TOP SINGLE on ${endpoint}/:id DELETE`, (done) => {
+    chai.request(server).delete(`${API_ROOT}${endpoint}/1`).set('Authorization', `Bearer ${initObj.tokens['FLEET_ADMIN']}`).end((err, res) => {
+      res.should.have.status(400);
+      done();
+    });
   });
 
   it(`ADMIN should DELETE TOP SINGLE on ${endpoint}/:id DELETE`, (done) => {

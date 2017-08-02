@@ -12,11 +12,45 @@ const deviceAttributes = ['id', 'serial', 'type', 'description', 'phone', 'plate
 
 const MAX_FLEET_CHILD_DEPTH = 3;
 
-const isFleetOwner = () => {
+const isDeviceOwner = () => {
   return (req, res, next) => {
     if (isRole(req, roles.FLEET_ADMIN)) {
       const email = req.account.email;
-      const id = req.params.id;
+      const device = req.params.email;
+      hasFleetAdminDevice(email, device).then((result) => {
+        if (result) {
+          next();
+        } else {
+          res.status(400).send(`Fleet Administrators can query only their fleets!`);
+        }
+      })
+    } else {
+      next();
+    }
+  }
+};
+
+const hasFleetAdminDevice = async (email, device) => {
+  const fleets = await getFleetAdminFleetsByEmail(email);
+  if (fleets && fleets.length > 0) {
+    for (let fleet of fleets) {
+      const devices = await fleet.getDevices();
+      if (devices.filter(async (obj) => {
+          const account = await obj.getAccount();
+          return account.email === device;
+        }).length > 0) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+const isFleetOwner = () => {
+  return (req, res, next) => {
+    const email = req.account.email;
+    const id = req.params.id;
+    if (isRole(req, roles.FLEET_ADMIN)) {
       if (id) {
         findFleetLevelById(email, id).then((level) => {
           if (level >= 0) {
@@ -35,8 +69,16 @@ const isFleetOwner = () => {
           }
         })
       }
+    } else if (isRole(req, roles.USER)) {
+      isUserFleet(email, id).then((result) => {
+        if (result) {
+          return next()
+        } else {
+          res.status(400).send(`Fleet does not belong to user!`);
+        }
+      })
     } else {
-      next(0);
+      next();
     }
   }
 };
@@ -110,6 +152,31 @@ const getFleetAdminFleetsByEmail = async (email) => {
       parent_id: null
     }
   });
+};
+
+const getUserFleetsByEmail = async (email) => {
+  // get user
+  const user = await models.User.findOne({
+    include: [{
+      model: models.Account,
+      as: 'account',
+      where: {
+        email: email
+      },
+    }],
+  });
+  // get top level fleets of fleet admin
+  return await user.getFleets();
+};
+
+const isUserFleet = async (email, id) => {
+  if (email && id) {
+    const fleets = await getUserFleetsByEmail(email);
+    return fleets.filter((obj) => {
+      return obj.id === Number(id);
+    }).length > 0
+  }
+  return false;
 };
 
 router.get('/', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
@@ -302,7 +369,6 @@ router.delete('/:id/user/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN])
 });
 
 router.get('/:id/device', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.USER]), isFleetOwner(), async (req, res) => {
-  //TODO check if devices belong
   try {
     const id = req.params.id;
     const limit = req.query.limit;
@@ -329,12 +395,18 @@ router.get('/:id/device', checkForRole([roles.ADMIN, roles.FLEET_ADMIN, roles.US
   }
 });
 
-router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
-  //TODO check if devices belong
+router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), isDeviceOwner(), async (req, res) => {
   try {
+    if (isRole(req, roles.FLEET_ADMIN)) {
+      const level = await findFleetLevelById(req.account.email, req.params.id);
+      if (level < 1) {
+        res.status(400).send(`Fleet Administrators cannot add devices to root fleet`);
+        return;
+      }
+    }
     const id = req.params.id;
     const email = req.params.email;
-    const fleet = await models.Fleet.findById(id)
+    const fleet = await models.Fleet.findById(id);
     if (fleet) {
       const device = await models.Device.findOne({
         include: [{
@@ -359,9 +431,15 @@ router.post('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN])
   }
 });
 
-router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), async (req, res) => {
-  //TODO check if devices belong. Should not be able to delete root fleet devices
+router.delete('/:id/device/:email', checkForRole([roles.ADMIN, roles.FLEET_ADMIN]), isFleetOwner(), isDeviceOwner(), async (req, res) => {
   try {
+    if (isRole(req, roles.FLEET_ADMIN)) {
+      const level = await findFleetLevelById(req.account.email, req.params.id);
+      if (level < 1) {
+        res.status(400).send(`Fleet Administrators cannot remove devices from root fleet`);
+        return;
+      }
+    }
     const id = req.params.id;
     const email = req.params.email;
     const fleet = await models.Fleet.findById(id);
